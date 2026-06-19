@@ -43,7 +43,7 @@ const TAB_CONFIG = {
 function FormField({ label, required, children, fullWidth }) {
     return (
         <div className={`flex flex-col gap-1.5 ${fullWidth ? 'md:col-span-2' : ''}`}>
-            <label className="text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>
+            <label className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
                 {label}{required && <span style={{ color: '#00c2cc' }} className="ml-0.5">*</span>}
             </label>
             {children}
@@ -174,7 +174,7 @@ export default function InventoryTransactionForm() {
                 style={{ background: 'radial-gradient(circle, rgba(0,194,204,0.03) 0%, transparent 70%)', filter: 'blur(45px)', zIndex: -1 }} />
 
             {/* Breadcrumb */}
-            <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--text-muted)' }}>
+            <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
                 <button onClick={() => navigate('/inventory/history')} className="hover:text-[#00c2cc] transition-colors cursor-pointer">
                     Movements
                 </button>
@@ -214,7 +214,7 @@ export default function InventoryTransactionForm() {
                                 {cfg.icon}
                             </span>
                             <span className="text-[11px] font-bold">{cfg.label}</span>
-                            <span className="text-[8px] font-medium opacity-65 text-center leading-tight px-1 hidden sm:block">{cfg.desc}</span>
+                            <span className="text-[11px] font-medium opacity-65 text-center leading-tight px-1 hidden sm:block">{cfg.desc}</span>
                         </button>
                     );
                 })}
@@ -261,11 +261,11 @@ export default function InventoryTransactionForm() {
                             style={{ background: 'rgba(255,255,255,0.02)' }}
                         >
                             <div className="flex flex-col gap-0.5">
-                                <span className="text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>Current Stock</span>
+                                <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Current Stock</span>
                                 <span className="text-lg font-bold text-white" style={{ fontFamily: "'Lora', serif" }}>{selectedMed.stock.toLocaleString('en-IN')} units</span>
                             </div>
                             <div className="flex flex-col gap-0.5">
-                                <span className="text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>
+                                <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
                                     Projected Post-State
                                 </span>
                                 <span
@@ -289,7 +289,7 @@ export default function InventoryTransactionForm() {
                 >
                     <div className="flex items-center gap-2">
                         <span className="material-symbols-rounded text-base" style={{ color: tabCfg.color, fontVariationSettings: "'FILL' 1" }}>{tabCfg.icon}</span>
-                        <span className="text-[11px] font-bold uppercase tracking-[0.08em]" style={{ color: tabCfg.color }}>{tabCfg.label} Parameters</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: tabCfg.color }}>{tabCfg.label} Parameters</span>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -23,7 +23,7 @@ const CATEGORIES = ['General', 'Cardiovascular', 'Anti-infective', 'Endocrine', 
 function FormField({ label, required, children, fullWidth }) {
     return (
         <div className={`flex flex-col gap-1.5 ${fullWidth ? 'md:col-span-2' : ''}`}>
-            <label className="text-[10px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--text-muted)' }}>
+            <label className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
                 {label}{required && <span style={{ color: '#00c2cc' }} className="ml-0.5">*</span>}
             </label>
             {children}
@@ -113,7 +113,7 @@ export default function EditMedicine() {
                 style={{ background: 'radial-gradient(circle, rgba(0,194,204,0.03) 0%, transparent 70%)', filter: 'blur(45px)', zIndex: -1 }} />
 
             {/* Breadcrumb */}
-            <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--text-muted)' }}>
+            <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
                 <button onClick={() => navigate('/medicines')} className="hover:text-[#00c2cc] transition-colors cursor-pointer">Ledger</button>
                 <span className="material-symbols-rounded text-sm">chevron_right</span>
                 <span style={{ color: 'var(--text-secondary)' }}>Edit Medicine</span>
@@ -190,7 +190,7 @@ export default function EditMedicine() {
                 <div className="rounded-lg p-5 flex flex-col gap-4 backdrop-blur-xl"
                     style={{ background: 'rgba(15,20,32,0.3)' }}>
                     <div>
-                        <span className="text-[9px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--text-muted)' }}>
+                        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
                             Inventory Status
                         </span>
                         <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>

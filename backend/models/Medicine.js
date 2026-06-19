@@ -30,6 +30,25 @@ const medicineSchema = new mongoose.Schema({
         type: String,
         trim: true
     },
+    primarySupplier: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Supplier',
+        index: true
+    },
+    alternateSupplier: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Supplier'
+    },
+    supplierCost: {
+        type: Number,
+        min: 0,
+        default: 0
+    },
+    lastPurchasePrice: {
+        type: Number,
+        min: 0,
+        default: 0
+    },
     status: {
         type: String,
         enum: ['Active', 'Inactive', 'Archived'],
@@ -44,7 +63,8 @@ const medicineSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Pharmacy',
         required: true,
-        index: true
+        index: true,
+        alias: 'branchId'
     },
     updatedBy: {
         type: mongoose.Schema.Types.ObjectId,

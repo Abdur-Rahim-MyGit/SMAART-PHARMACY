@@ -151,7 +151,7 @@ export default function ExpiryDashboard() {
                 quantityChanged: -currentStock,
                 transactionType: 'Expired',
                 reason: 'Expired',
-                notes: 'Written off via Expiry Intelligence Dashboard quick-action'
+                notes: 'Disposed via Expiry Intelligence Dashboard quick-action'
             };
         }
 
@@ -182,14 +182,14 @@ export default function ExpiryDashboard() {
             
             {/* Header */}
             <div className="flex flex-col gap-1">
-                <span className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--text-muted)' }}>
+                <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                     Inventory Quality Control
                 </span>
-                <h2 className="text-4xl md:text-5xl font-black tracking-tight text-white leading-none" style={{ fontFamily: "'Lora', serif" }}>
+                <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white leading-none" style={{ fontFamily: "'Lora', serif" }}>
                     Expiry <span className="text-sky-400">Intelligence</span>
                 </h2>
                 <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                    Analyze upcoming shelf expirations and record quick write-offs or supplier returns.
+                    Analyze upcoming shelf expirations and record quick disposals or supplier returns.
                 </p>
             </div>
 
@@ -220,8 +220,8 @@ export default function ExpiryDashboard() {
                         <span className="text-3xl font-black text-white tracking-tight text-glow" style={{ fontFamily: "'Lora', serif" }}>
                             ₹{bandsData.deadStockValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                         </span>
-                        <span className="text-[10px] font-bold uppercase tracking-[0.08em] mt-0.5" style={{ color: 'var(--text-secondary)' }}>Dead Stock Value</span>
-                        <span className="text-[8px] opacity-65 mt-0.5" style={{ color: 'var(--text-muted)' }}>Expired or expiring within 90 days</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wide mt-0.5" style={{ color: 'var(--text-secondary)' }}>Dead Stock Value</span>
+                        <span className="text-[11px] opacity-65 mt-0.5" style={{ color: 'var(--text-muted)' }}>Expired or expiring within 90 days</span>
                     </div>
                 </div>
 
@@ -237,11 +237,11 @@ export default function ExpiryDashboard() {
                             <span className="text-2xl font-black text-white tracking-tight" style={{ fontFamily: "'Lora', serif" }}>
                                 {bandsData.red.length}
                             </span>
-                            <span className="text-[9px] font-bold" style={{ color: '#f87171' }}>
+                            <span className="text-[11px] font-bold" style={{ color: '#f87171' }}>
                                 ₹{bandsData.valuations.red.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                             </span>
                         </div>
-                        <span className="text-[10px] font-bold uppercase tracking-[0.08em] mt-0.5" style={{ color: 'var(--text-secondary)' }}>Red Band (≤30 Days)</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wide mt-0.5" style={{ color: 'var(--text-secondary)' }}>Red Band (≤30 Days)</span>
                     </div>
                 </div>
 
@@ -257,11 +257,11 @@ export default function ExpiryDashboard() {
                             <span className="text-2xl font-black text-white tracking-tight" style={{ fontFamily: "'Lora', serif" }}>
                                 {bandsData.amber.length}
                             </span>
-                            <span className="text-[9px] font-bold" style={{ color: '#f59e0b' }}>
+                            <span className="text-[11px] font-bold" style={{ color: '#f59e0b' }}>
                                 ₹{bandsData.valuations.amber.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                             </span>
                         </div>
-                        <span className="text-[10px] font-bold uppercase tracking-[0.08em] mt-0.5" style={{ color: 'var(--text-secondary)' }}>Amber Band (31-60 Days)</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wide mt-0.5" style={{ color: 'var(--text-secondary)' }}>Amber Band (31-60 Days)</span>
                     </div>
                 </div>
 
@@ -277,11 +277,11 @@ export default function ExpiryDashboard() {
                             <span className="text-2xl font-black text-white tracking-tight" style={{ fontFamily: "'Lora', serif" }}>
                                 {bandsData.green.length}
                             </span>
-                            <span className="text-[9px] font-bold" style={{ color: '#34d399' }}>
+                            <span className="text-[11px] font-bold" style={{ color: '#34d399' }}>
                                 ₹{bandsData.valuations.green.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                             </span>
                         </div>
-                        <span className="text-[10px] font-bold uppercase tracking-[0.08em] mt-0.5" style={{ color: 'var(--text-secondary)' }}>Green Band (61-90 Days)</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wide mt-0.5" style={{ color: 'var(--text-secondary)' }}>Green Band (61-90 Days)</span>
                     </div>
                 </div>
             </div>
@@ -337,7 +337,7 @@ export default function ExpiryDashboard() {
                     ) : (
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="border-b border-white/[0.04] text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                                <tr className="border-b border-white/[0.04] text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                                     <th className="pb-3 pl-2">Medicine Detail</th>
                                     <th className="pb-3">Days Remaining</th>
                                     <th className="pb-3 text-right">Stock</th>
@@ -360,7 +360,7 @@ export default function ExpiryDashboard() {
                                                         className="text-xs font-extrabold text-white hover:text-[#00e5ff] cursor-pointer transition-colors leading-snug">
                                                         {med.name}
                                                     </span>
-                                                    <span className="text-[9px] font-mono tracking-wider opacity-60" style={{ color: 'var(--text-muted)' }}>
+                                                    <span className="text-[11px] font-mono tracking-wider opacity-60" style={{ color: 'var(--text-muted)' }}>
                                                         NDC: {med.ndc} · {med.category}
                                                     </span>
                                                 </div>
@@ -373,11 +373,11 @@ export default function ExpiryDashboard() {
                                                         {isExpired ? 'EXPIRED' : `${days} days`}
                                                     </span>
                                                     {isExpired ? (
-                                                        <span className="text-[8px] font-bold px-1.5 py-0.2 rounded" style={{ background: 'rgba(248,113,113,0.1)', color: '#f87171' }}>
+                                                        <span className="text-[11px] font-bold px-1.5 py-0.2 rounded" style={{ background: 'rgba(248,113,113,0.1)', color: '#f87171' }}>
                                                             Overdue
                                                         </span>
                                                     ) : (
-                                                        <span className="text-[8px] font-medium opacity-60" style={{ color: 'var(--text-secondary)' }}>
+                                                        <span className="text-[11px] font-medium opacity-60" style={{ color: 'var(--text-secondary)' }}>
                                                             ({new Date(med.expiryDate).toLocaleDateString()})
                                                         </span>
                                                     )}
@@ -397,7 +397,7 @@ export default function ExpiryDashboard() {
                                             {/* disposal buttons */}
                                             <td className="py-3.5 pr-2 text-right">
                                                 {med.stock <= 0 ? (
-                                                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 bg-white/[0.02] border border-white/[0.04] px-2 py-1 rounded">
+                                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 bg-white/[0.02] border border-white/[0.04] px-2 py-1 rounded">
                                                         Stock Cleared
                                                     </span>
                                                 ) : (
@@ -406,7 +406,7 @@ export default function ExpiryDashboard() {
                                                         <button
                                                             disabled={isActionLoading}
                                                             onClick={() => handleAction(med._id, 'return', med.stock)}
-                                                            className="px-2.5 py-1 rounded text-[10px] font-bold cursor-pointer transition-all duration-200 border border-white/[0.04] bg-white/[0.02] text-white/80 hover:text-[#00e5ff] hover:bg-[#00e5ff]/10 hover:borderColor-[#00e5ff]/30 disabled:opacity-50"
+                                                            className="px-2.5 py-1 rounded text-[11px] font-bold cursor-pointer transition-all duration-200 border border-white/[0.04] bg-white/[0.02] text-white/80 hover:text-[#00e5ff] hover:bg-[#00e5ff]/10 hover:borderColor-[#00e5ff]/30 disabled:opacity-50"
                                                         >
                                                             {isActionLoading && actionType === 'return' ? (
                                                                 <span className="material-symbols-rounded animate-spin text-xs">sync</span>
@@ -415,16 +415,16 @@ export default function ExpiryDashboard() {
                                                             )}
                                                         </button>
 
-                                                        {/* Write Off button */}
+                                                        {/* Dispose Expired button */}
                                                         <button
                                                             disabled={isActionLoading}
                                                             onClick={() => handleAction(med._id, 'write-off', med.stock)}
-                                                            className="px-2.5 py-1 rounded text-[10px] font-bold cursor-pointer transition-all duration-200 border border-[#f87171]/20 bg-[#f87171]/[0.03] text-[#f87171] hover:bg-[#f87171]/10 hover:borderColor-[#f87171]/40 disabled:opacity-50"
+                                                            className="px-2.5 py-1 rounded text-[11px] font-bold cursor-pointer transition-all duration-200 border border-[#f87171]/20 bg-[#f87171]/[0.03] text-[#f87171] hover:bg-[#f87171]/10 hover:borderColor-[#f87171]/40 disabled:opacity-50"
                                                         >
                                                             {isActionLoading && actionType === 'write-off' ? (
                                                                 <span className="material-symbols-rounded animate-spin text-xs">sync</span>
                                                             ) : (
-                                                                'Write Off'
+                                                                'Dispose Expired'
                                                             )}
                                                         </button>
                                                     </div>

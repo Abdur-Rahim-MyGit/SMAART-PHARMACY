@@ -30,7 +30,7 @@ const CATEGORY_ICONS = {
 function DetailField({ label, value, mono }) {
     return (
         <div className="flex flex-col gap-1">
-            <span className="text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>{label}</span>
+            <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{label}</span>
             <span className={`text-sm font-semibold ${mono ? 'font-mono' : ''}`} style={{ color: 'var(--text-primary)' }}>{value || '—'}</span>
         </div>
     );
@@ -97,7 +97,7 @@ export default function MedicineDetails() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex flex-col gap-0.5">
-                    <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>
+                    <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
                         <button onClick={() => navigate('/medicines')} className="hover:text-[#00c2cc] transition-colors cursor-pointer">Ledger</button>
                         <span className="material-symbols-rounded text-xs">chevron_right</span>
                         <span style={{ color: 'var(--text-secondary)' }}>{medicine.name}</span>
@@ -174,6 +174,26 @@ export default function MedicineDetails() {
                 </div>
             )}
 
+            {/* Substitute Finder Banner */}
+            {medicine.stock === 0 && medicine.substitutes && medicine.substitutes.length > 0 && (
+                <div className="flex items-start gap-3 p-4 rounded-xl text-sm animate-fade-in"
+                    style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', color: '#bae6fd' }}>
+                    <span className="material-symbols-rounded text-lg text-[#38bdf8] mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>find_in_page</span>
+                    <div className="flex flex-col gap-2">
+                        <span className="font-bold text-xs text-[#38bdf8] uppercase tracking-wider">Similar Medicines Available (Substitutes)</span>
+                        <span className="text-[11px] opacity-80 font-medium">Since this medication is currently out of stock, you can suggest these substitutes to the patient:</span>
+                        <div className="flex gap-2 flex-wrap mt-0.5">
+                            {medicine.substitutes.map((sub, i) => (
+                                <span key={i} className="px-2.5 py-1 rounded-lg text-xs font-bold text-white"
+                                    style={{ background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.25)' }}>
+                                    {sub}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Left column */}
                 <div className="lg:col-span-2 flex flex-col gap-4">
@@ -198,19 +218,19 @@ export default function MedicineDetails() {
                             <div className="flex flex-col gap-1 flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
                                     <span
-                                        className="px-2 py-0.5 rounded text-[8px] font-bold"
+                                        className="px-2 py-0.5 rounded text-[11px] font-bold"
                                         style={{ background: statusCfg.bg, color: statusCfg.color }}
                                     >
                                         {medicine.status}
                                     </span>
                                     <span
-                                        className="px-2 py-0.5 rounded text-[8px] font-bold"
+                                        className="px-2 py-0.5 rounded text-[11px] font-bold"
                                         style={{ background: `${catColor}08`, color: catColor }}
                                     >
                                         {medicine.category}
                                     </span>
                                 </div>
-                                <div className="font-mono text-[10px] opacity-60" style={{ color: 'var(--text-muted)' }}>NDC: {medicine.ndc}</div>
+                                <div className="font-mono text-[11px] opacity-60" style={{ color: 'var(--text-muted)' }}>NDC: {medicine.ndc}</div>
                                 {medicine.supplier && (
                                     <div className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>
                                         <span className="opacity-60">Supplier: </span>
@@ -248,8 +268,8 @@ export default function MedicineDetails() {
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-xl md:text-2xl font-black text-white tracking-tighter" style={{ fontFamily: "'Lora', serif", leading: 'none' }}>{k.value}</span>
-                                    <span className="text-[9px] font-bold mt-0.5" style={{ color: 'var(--text-secondary)' }}>{k.label}</span>
-                                    <span className="text-[8px] opacity-50 mt-0.5" style={{ color: 'var(--text-muted)' }}>{k.sub}</span>
+                                    <span className="text-[11px] font-bold mt-0.5" style={{ color: 'var(--text-secondary)' }}>{k.label}</span>
+                                    <span className="text-[11px] opacity-50 mt-0.5" style={{ color: 'var(--text-muted)' }}>{k.sub}</span>
                                 </div>
                             </div>
                         ))}
@@ -258,7 +278,7 @@ export default function MedicineDetails() {
                     {/* Stock actions */}
                     <div className="rounded-lg p-4 flex flex-col gap-3 backdrop-blur-md"
                         style={{ background: 'rgba(15,20,32,0.3)' }}>
-                        <span className="text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>Inventory Actions</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Inventory Actions</span>
                         <div className="grid grid-cols-3 gap-3">
                             {[
                                 { label: 'Stock In', type: 'stock-in', icon: 'add_circle', color: '#34d399' },
@@ -273,7 +293,7 @@ export default function MedicineDetails() {
                                     onMouseLeave={e => { e.currentTarget.style.background = `${a.color}06`; }}
                                 >
                                     <span className="material-symbols-rounded text-base" style={{ fontVariationSettings: "'FILL' 1" }}>{a.icon}</span>
-                                    <span className="text-[10px] font-bold">{a.label}</span>
+                                    <span className="text-[11px] font-bold">{a.label}</span>
                                 </button>
                             ))}
                         </div>
@@ -282,7 +302,7 @@ export default function MedicineDetails() {
                     {/* Details grid */}
                     <div className="rounded-lg p-5 flex flex-col gap-4 backdrop-blur-md"
                         style={{ background: 'rgba(15,20,32,0.3)' }}>
-                        <span className="text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>Record Overview</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Record Overview</span>
                         <div className="grid grid-cols-2 gap-4">
                             <DetailField label="Medicine Name" value={medicine.name} />
                             <DetailField label="NDC Code" value={medicine.ndc} mono />
@@ -298,7 +318,7 @@ export default function MedicineDetails() {
 
                 {/* Right column — transaction timeline */}
                 <div className="flex flex-col gap-3">
-                    <span className="text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>
+                    <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
                         Transaction History ({logs.length})
                     </span>
                     <div
@@ -339,7 +359,7 @@ export default function MedicineDetails() {
                                                             >
                                                                 {log.transactionType}
                                                             </span>
-                                                            <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>
+                                                            <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
                                                                 {new Date(log.createdAt).toLocaleDateString()}
                                                             </span>
                                                         </div>
@@ -351,12 +371,12 @@ export default function MedicineDetails() {
                                                             <span className="text-xs font-bold" style={{ color: qty > 0 ? '#34d399' : qty < 0 ? '#f87171' : 'var(--text-muted)' }}>
                                                                 {qty > 0 ? `+${qty.toLocaleString('en-IN')}` : qty.toLocaleString('en-IN')}
                                                             </span>
-                                                            {log.reason && <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>· {log.reason}</span>}
+                                                            {log.reason && <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>· {log.reason}</span>}
                                                         </div>
 
-                                                        {log.notes && <p className="text-[10px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>{log.notes}</p>}
-                                                        {log.batchNumber && <span className="text-[9px] font-mono" style={{ color: 'var(--text-muted)' }}>Batch: {log.batchNumber}</span>}
-                                                        <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>Authorized: {log.userId?.username || 'System'}</span>
+                                                        {log.notes && <p className="text-[11px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>{log.notes}</p>}
+                                                        {log.batchNumber && <span className="text-[11px] font-mono" style={{ color: 'var(--text-muted)' }}>Batch: {log.batchNumber}</span>}
+                                                        <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Authorized: {log.userId?.username || 'System'}</span>
                                                     </div>
                                                 </div>
                                             );

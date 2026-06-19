@@ -206,11 +206,11 @@ function MedCard({ item, query, index, onView, onEdit }) {
                             {ci}
                         </span>
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{item.category}</span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{item.category}</span>
                 </div>
                 
                 {/* Status indicator pill */}
-                <span className={`text-[8px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${item.status === 'Inactive' ? 'animate-pulse-slow' : ''}`}
+                <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${item.status === 'Inactive' ? 'animate-pulse-slow' : ''}`}
                     style={{ background: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}>
                     {item.status}
                 </span>
@@ -236,11 +236,11 @@ function MedCard({ item, query, index, onView, onEdit }) {
                     </div>
 
                     <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="text-[10px] font-mono tracking-wider font-semibold" style={{ color: 'var(--text-muted)' }}>{item.ndc}</span>
+                        <span className="text-[11px] font-mono tracking-wider font-semibold" style={{ color: 'var(--text-muted)' }}>{item.ndc}</span>
                         {item.supplier && (
                             <>
                                 <span className="w-1.2 h-1.2 rounded-full bg-white/10" />
-                                <span className="text-[9px] font-medium truncate max-w-[100px]" style={{ color: 'var(--text-muted)' }}>{item.supplier}</span>
+                                <span className="text-[11px] font-medium truncate max-w-[100px]" style={{ color: 'var(--text-muted)' }}>{item.supplier}</span>
                             </>
                         )}
                     </div>
@@ -249,14 +249,14 @@ function MedCard({ item, query, index, onView, onEdit }) {
                 {/* Expiry / Stock Out warnings */}
                 <div className="flex flex-col gap-1 mt-0.5 min-h-[20px]">
                     {isExpired && (
-                        <div className="text-[10px] font-extrabold px-2 py-0.5 rounded flex items-center gap-1.5 w-max"
+                        <div className="text-[11px] font-extrabold px-2 py-0.5 rounded flex items-center gap-1.5 w-max"
                             style={{ background: 'rgba(248,113,113,0.06)', color: '#f87171', border: '1px solid rgba(248,113,113,0.12)' }}>
                             <span className="material-symbols-rounded text-xs">event_busy</span>
                             Expired
                         </div>
                     )}
                     {!isExpired && isNearExpiry && (
-                        <div className="text-[10px] font-extrabold px-2 py-0.5 rounded flex items-center gap-1.5 w-max"
+                        <div className="text-[11px] font-extrabold px-2 py-0.5 rounded flex items-center gap-1.5 w-max"
                             style={{ background: 'rgba(245,158,11,0.06)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.12)' }}>
                             <span className="material-symbols-rounded text-xs">warning</span>
                             Expiring Soon
@@ -267,7 +267,7 @@ function MedCard({ item, query, index, onView, onEdit }) {
                 {/* Price + stock row */}
                 <div className="flex items-center justify-between pt-3 mt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.03)' }}>
                     <div className="flex flex-col">
-                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Unit Cost</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Unit Cost</span>
                         <span className="text-lg font-black text-white mt-0.5 text-glow" style={{ fontFamily: "'Lora', serif" }}>
                             ₹{item.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
@@ -290,7 +290,7 @@ function MedCard({ item, query, index, onView, onEdit }) {
                     )}
 
                     <div className="flex flex-col items-end">
-                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Stock Level</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Stock Level</span>
                         <span className="text-xs font-bold mt-0.5" style={{ color: isZero ? '#f87171' : isLow ? '#f59e0b' : '#34d399' }}>
                             {isZero ? 'Out of Stock' : `${item.stock.toLocaleString('en-IN')} units`}
                         </span>
@@ -374,31 +374,118 @@ export default function MedicineList() {
         <div className="flex flex-col gap-4 max-w-7xl mx-auto animate-fade-in relative z-10">
 
             {/* ── Unified Split Hero & Key Metrics Banner ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end pt-0 pb-0">
-                {/* Hero Typography */}
-                <div className="lg:col-span-8 flex flex-col gap-1.5">
-                    <span className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--text-muted)' }}>
-                        Catalog Core
-                    </span>
-                    <h2 className="text-4xl md:text-[60px] lg:text-[78px] font-black tracking-tighter text-white leading-[0.88] mt-0" style={{ fontFamily: "'Lora', serif" }}>
-                        Intelligent <span className="text-sky-400">Medicine</span> Catalog
-                    </h2>
-                    <p className="text-[13px] max-w-lg leading-normal mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-                        Monitor inventory health, track stock movements, and prevent shortages.
-                    </p>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                
+                {/* Left Area (Hero Typography + Search & Filters) */}
+                <div className="lg:col-span-8 flex flex-col gap-4">
+                    {/* Hero Typography */}
+                    <div className="flex flex-col gap-1.5 pt-1">
+                        <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                            Catalog Core
+                        </span>
+                        <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white leading-none" style={{ fontFamily: "'Lora', serif" }}>
+                            Intelligent <span className="text-sky-400">Medicine</span> Catalog
+                        </h2>
+                        <p className="text-[13px] max-w-lg leading-normal mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                            Monitor inventory health, track stock movements, and prevent shortages.
+                        </p>
+                    </div>
+
+                    {/* ── Command Bar Search & Filters ── */}
+                    <div className="p-4 rounded-xl flex flex-col gap-4 backdrop-blur-xl border border-white/[0.03]"
+                        style={{ background: 'rgba(15,20,32,0.25)' }}>
+                        
+                        {/* Search / Filter Row */}
+                        <div className="flex flex-col md:flex-row items-center gap-4">
+                            {/* Search Field */}
+                            <div className="relative flex-1 w-full">
+                                <span className="material-symbols-rounded absolute left-3.5 top-1/2 -translate-y-1/2 text-lg pointer-events-none" 
+                                    style={{ color: '#00e5ff' }}>search</span>
+                                <input 
+                                    ref={searchInputRef}
+                                    type="text" 
+                                    placeholder="Search medication name, NDC, category... (Press '/' to focus)" 
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    className="w-full pl-11 pr-4 py-3 rounded-lg text-sm outline-none transition-all duration-200 border border-white/[0.03]"
+                                    style={{ background: 'rgba(255,255,255,0.03)', color: '#ffffff' }}
+                                    onFocus={e => { e.target.style.background = 'rgba(255,255,255,0.05)'; e.target.style.borderColor = 'rgba(0,229,255,0.3)'; }}
+                                    onBlur={e => { e.target.style.background = 'rgba(255,255,255,0.03)'; e.target.style.borderColor = 'rgba(255,255,255,0.03)'; }} 
+                                />
+                            </div>
+
+                            {/* Status Selectors */}
+                            <div className="flex items-center rounded-lg p-1 gap-1 flex-shrink-0 w-full md:w-auto border border-white/[0.03]"
+                                style={{ background: 'rgba(255,255,255,0.02)' }}>
+                                {['All', 'Active', 'Inactive', 'Archived'].map(f => (
+                                    <button key={f} onClick={() => setStatusFilter(f)}
+                                        className="flex-1 md:flex-initial px-4 py-2 rounded-md text-xs font-bold transition-all duration-200 cursor-pointer"
+                                        style={{
+                                            background: statusFilter === f ? 'rgba(0,229,255,0.15)' : 'transparent',
+                                            color: statusFilter === f ? '#ffffff' : 'rgba(255,255,255,0.5)',
+                                            border: statusFilter === f ? '1px solid rgba(0,229,255,0.2)' : '1px solid transparent',
+                                        }}>
+                                        {f}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* New Medicine Action */}
+                            {user?.role === 'Manager' && (
+                                <button
+                                    onClick={() => navigate('/medicines/add')}
+                                    className="flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-xs font-extrabold transition-all duration-200 cursor-pointer w-full md:w-auto flex-shrink-0 text-slate-950 hover:shadow-[0_0_20px_rgba(0,229,255,0.35)]"
+                                    style={{ background: 'linear-gradient(135deg, #00e5ff 0%, #0099a8 100%)' }}
+                                >
+                                    <span className="material-symbols-rounded text-lg">add</span>
+                                    <span>New Medicine</span>
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Category Selection Row */}
+                        <div className="flex gap-2 overflow-x-auto pb-1 scrollable">
+                            {CATEGORIES.map(cat => {
+                                const cc = CAT_COLORS[cat] || '#00e5ff';
+                                const active = categoryFilter === cat;
+                                const count = activeCategoryCounts[cat] || 0;
+                                return (
+                                    <button key={cat} onClick={() => setCategoryFilter(cat)}
+                                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer flex-shrink-0"
+                                        style={{
+                                            background: active ? `${cc}25` : 'rgba(255,255,255,0.02)',
+                                            color: active ? '#ffffff' : 'rgba(255,255,255,0.5)',
+                                            border: active ? `1px solid ${cc}40` : '1px solid transparent',
+                                        }}>
+                                        {cat !== 'All' && <span className="material-symbols-rounded text-xs" style={{ fontVariationSettings: "'FILL' 1", color: active ? cc : 'inherit' }}>{CAT_ICONS[cat]}</span>}
+                                        <span>{cat}</span>
+                                        <span 
+                                            className="text-[11px] px-1.5 py-0.5 rounded-full font-mono ml-0.5"
+                                            style={{ 
+                                                background: active ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)',
+                                                color: active ? '#ffffff' : 'rgba(255,255,255,0.4)'
+                                            }}
+                                        >
+                                            {count}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </div>
 
-                {/* Connected Metrics Panel */}
-                <div className="lg:col-span-4 grid grid-cols-2 gap-4 lg:pl-8 self-end pt-2 lg:pt-0">
+                {/* Right Area (Connected Metrics Panel) */}
+                <div className="lg:col-span-4 grid grid-cols-2 gap-4 lg:pl-4 self-start pt-2 lg:pt-0">
                     {/* Inventory Health Card */}
                     <div className="rounded-lg p-3.5 flex flex-col gap-1.5 backdrop-blur-md"
                         style={{ background: 'rgba(15,20,32,0.35)', border: '1px solid rgba(255,255,255,0.03)' }}>
-                        <span className="text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>Inventory Health</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Inventory Health</span>
                         <div className="flex items-baseline gap-1.5 mt-0.5">
                             <span className="text-3xl font-black leading-none tracking-tighter" style={{ fontFamily: "'Lora', serif", color: healthColor }}>
                                 <CountUp value={health} suffix="%" />
                             </span>
-                            <span className="text-[8px] font-bold px-1.5 py-0.2 rounded" style={{ background: `${healthColor}10`, color: healthColor }}>
+                            <span className="text-[11px] font-bold px-1.5 py-0.2 rounded" style={{ background: `${healthColor}10`, color: healthColor }}>
                                 {health >= 80 ? 'Optimal' : health >= 50 ? 'Warning' : 'Critical'}
                             </span>
                         </div>
@@ -407,12 +494,12 @@ export default function MedicineList() {
                     {/* Stock Value Card */}
                     <div className="rounded-lg p-3.5 flex flex-col gap-1.5 backdrop-blur-md"
                         style={{ background: 'rgba(15,20,32,0.35)', border: '1px solid rgba(255,255,255,0.03)' }}>
-                        <span className="text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>Stock Value</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Stock Value</span>
                         <div className="flex items-center gap-1.5 mt-0.5">
                             <span className="text-3xl font-black text-white leading-none tracking-tighter" style={{ fontFamily: "'Lora', serif" }}>
                                 <CountUp value={(totalValue/100000)} prefix="₹" suffix="L" />
                             </span>
-                            <span className="flex items-center text-[9px] font-bold text-emerald-400 gap-0.5 ml-1" title="Stock value trend versus last week">
+                            <span className="flex items-center text-[11px] font-bold text-emerald-400 gap-0.5 ml-1" title="Stock value trend versus last week">
                                 <span className="material-symbols-rounded text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>trending_up</span>
                                 <span>↑4%</span>
                             </span>
@@ -422,97 +509,16 @@ export default function MedicineList() {
                     {/* Smart Insights list Card */}
                     <div className="col-span-2 rounded-lg p-3.5 flex flex-col gap-2.5 backdrop-blur-md"
                         style={{ background: 'rgba(15,20,32,0.35)', border: '1px solid rgba(255,255,255,0.03)' }}>
-                        <span className="text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>Smart Insights</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Smart Insights</span>
                         <div className="flex flex-col gap-1.5">
                             {insights.map((ins, i) => (
                                 <div key={i} className="flex items-center gap-1.5">
                                     <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: ins.color }} />
-                                    <span className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>{ins.text}</span>
+                                    <span className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>{ins.text}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
-                </div>
-            </div>
-
-            {/* ── Command Bar Search & Filters ── */}
-            <div className="p-4 rounded-xl flex flex-col gap-4 backdrop-blur-xl border border-white/[0.03]"
-                style={{ background: 'rgba(15,20,32,0.25)' }}>
-                
-                {/* Search / Filter Row */}
-                <div className="flex flex-col md:flex-row items-center gap-4">
-                    {/* Search Field */}
-                    <div className="relative flex-1 w-full">
-                        <span className="material-symbols-rounded absolute left-3.5 top-1/2 -translate-y-1/2 text-lg pointer-events-none" 
-                            style={{ color: '#00e5ff' }}>search</span>
-                        <input 
-                            ref={searchInputRef}
-                            type="text" 
-                            placeholder="Search medication name, NDC, category... (Press '/' to focus)" 
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                            className="w-full pl-11 pr-4 py-3 rounded-lg text-sm outline-none transition-all duration-200 border border-white/[0.03]"
-                            style={{ background: 'rgba(255,255,255,0.03)', color: '#ffffff' }}
-                            onFocus={e => { e.target.style.background = 'rgba(255,255,255,0.05)'; e.target.style.borderColor = 'rgba(0,229,255,0.3)'; }}
-                            onBlur={e => { e.target.style.background = 'rgba(255,255,255,0.03)'; e.target.style.borderColor = 'rgba(255,255,255,0.03)'; }} 
-                        />
-                    </div>
-
-                    {/* Status Selectors */}
-                    <div className="flex items-center rounded-lg p-1 gap-1 flex-shrink-0 w-full md:w-auto border border-white/[0.03]"
-                        style={{ background: 'rgba(255,255,255,0.02)' }}>
-                        {['All', 'Active', 'Inactive', 'Archived'].map(f => (
-                            <button key={f} onClick={() => setStatusFilter(f)}
-                                className="flex-1 md:flex-initial px-4 py-2 rounded-md text-xs font-bold transition-all duration-200 cursor-pointer"
-                                style={{
-                                    background: statusFilter === f ? 'rgba(0,229,255,0.15)' : 'transparent',
-                                    color: statusFilter === f ? '#ffffff' : 'rgba(255,255,255,0.5)',
-                                    border: statusFilter === f ? '1px solid rgba(0,229,255,0.2)' : '1px solid transparent',
-                                }}>
-                                {f}
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* New Medicine Action */}
-                    <button
-                        onClick={() => navigate('/medicines/add')}
-                        className="flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-xs font-extrabold transition-all duration-200 cursor-pointer w-full md:w-auto flex-shrink-0 text-slate-950 hover:shadow-[0_0_20px_rgba(0,229,255,0.35)]"
-                        style={{ background: 'linear-gradient(135deg, #00e5ff 0%, #0099a8 100%)' }}
-                    >
-                        <span className="material-symbols-rounded text-lg">add</span>
-                        <span>New Medicine</span>
-                    </button>
-                </div>
-
-                {/* Category Selection Row */}
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollable">
-                    {CATEGORIES.map(cat => {
-                        const cc = CAT_COLORS[cat] || '#00e5ff';
-                        const active = categoryFilter === cat;
-                        const count = activeCategoryCounts[cat] || 0;
-                        return (
-                            <button key={cat} onClick={() => setCategoryFilter(cat)}
-                                className="flex items-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer flex-shrink-0"
-                                style={{
-                                    background: active ? `${cc}25` : 'rgba(255,255,255,0.02)',
-                                    color: active ? '#ffffff' : 'rgba(255,255,255,0.5)',
-                                    border: active ? `1px solid ${cc}40` : '1px solid transparent',
-                                }}>
-                                {cat !== 'All' && <span className="material-symbols-rounded text-xs" style={{ fontVariationSettings: "'FILL' 1", color: active ? cc : 'inherit' }}>{CAT_ICONS[cat]}</span>}
-                                <span>{cat}</span>
-                                <span 
-                                    className="text-[9px] px-1.5 py-0.5 rounded-full font-mono ml-0.5"
-                                    style={{ 
-                                        background: active ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)',
-                                        color: active ? '#ffffff' : 'rgba(255,255,255,0.4)'
-                                    }}
-                                >
-                                    {count}
-                                </span>
-                            </button>
-                        );
-                    })}
                 </div>
             </div>
 
@@ -521,12 +527,14 @@ export default function MedicineList() {
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                     Showing <strong style={{ color: 'var(--text-secondary)' }}>{filtered.length}</strong> of {medicines.length} registered medications
                 </span>
-                <button onClick={() => navigate('/inventory/transaction-new')}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all duration-200"
-                    style={{ background: 'rgba(167,139,250,0.05)', border: '1px solid rgba(167,139,250,0.12)', color: '#a78bfa' }}>
-                    <span className="material-symbols-rounded text-sm">swap_horiz</span>
-                    <span>Record Movement</span>
-                </button>
+                {user?.role !== 'Admin' && (
+                    <button onClick={() => navigate('/inventory/transaction-new')}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all duration-200"
+                        style={{ background: 'rgba(167,139,250,0.05)', border: '1px solid rgba(167,139,250,0.12)', color: '#a78bfa' }}>
+                        <span className="material-symbols-rounded text-sm">swap_horiz</span>
+                        <span>Record Movement</span>
+                    </button>
+                )}
             </div>
 
             {/* ── Catalog Grid ── */}

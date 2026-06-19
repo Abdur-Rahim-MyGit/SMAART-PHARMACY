@@ -17,7 +17,7 @@ const inputFocusStyle = {
 function FormField({ label, required, children, fullWidth }) {
     return (
         <div className={`flex flex-col gap-1.5 ${fullWidth ? 'md:col-span-2' : ''}`}>
-            <label className="text-[10px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--text-muted)' }}>
+            <label className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
                 {label}{required && <span className="text-[#00c2cc] ml-0.5">*</span>}
             </label>
             {children}
@@ -90,7 +90,7 @@ export default function AddMedicine() {
                 style={{ background: 'radial-gradient(circle, rgba(0,194,204,0.03) 0%, transparent 70%)', filter: 'blur(45px)', zIndex: -1 }} />
 
             {/* Breadcrumb */}
-            <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--text-muted)' }}>
+            <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
                 <button onClick={() => navigate('/medicines')} className="hover:text-[#00c2cc] transition-colors cursor-pointer">
                     Ledger
                 </button>

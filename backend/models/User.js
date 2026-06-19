@@ -15,12 +15,50 @@ const userSchema = new mongoose.Schema({
     pharmacyId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Pharmacy',
-        required: true
+        required: true,
+        alias: 'branchId'
     },
     role: {
         type: String,
         enum: ['Admin', 'Pharmacist', 'Manager'],
         required: true
+    },
+    fullName: {
+        type: String,
+        trim: true
+    },
+    phone: {
+        type: String,
+        trim: true
+    },
+    email: {
+        type: String,
+        trim: true
+    },
+    qualification: {
+        type: String,
+        enum: ['D.Pharm', 'B.Pharm', 'M.Pharm', 'Pharm.D', 'Other']
+    },
+    registrationNumber: {
+        type: String,
+        trim: true
+    },
+    shiftType: {
+        type: String,
+        enum: ['Day', 'Night', 'Rotational'],
+        default: 'Day'
+    },
+    status: {
+        type: String,
+        enum: ['Active', 'Disabled', 'Inactive'],
+        default: 'Active'
+    },
+    lastLogin: {
+        type: Date
+    },
+    joinedDate: {
+        type: Date,
+        default: Date.now
     },
     createdAt: {
         type: Date,

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import TabletIllustration from '../components/TabletIllustration';
+import TabletLoader from '../components/TabletLoader';
 
 export default function Login() {
     const { login, isAuthenticated, error: authError } = useAuth();
@@ -12,25 +14,72 @@ export default function Login() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPass, setShowPass] = useState(false);
     const [focused, setFocused] = useState(null);
+    const [tabletState, setTabletState] = useState('idle');
+    const [shouldShake, setShouldShake] = useState(false);
 
     useEffect(() => {
-        if (isAuthenticated) navigate('/medicines');
+        if (isAuthenticated) {
+            navigate('/dashboard');
+        }
     }, [isAuthenticated, navigate]);
+
+    // Reset error animation state when starting to type
+    useEffect(() => {
+        if (tabletState === 'error') {
+            setTabletState('idle');
+        }
+    }, [username, password]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLocalError('');
+        
         if (!username || !password) {
             setLocalError('Please fill in both fields.');
+            setTabletState('error');
+            setShouldShake(true);
+            setTimeout(() => setShouldShake(false), 500);
             return;
         }
+
         setIsSubmitting(true);
-        const result = await login(username, password);
+        setTabletState('loading');
+
+        // Artificial delay for a better viewing experience of the cute loader
+        const [result] = await Promise.all([
+            login(username, password),
+            new Promise(resolve => setTimeout(resolve, 1200))
+        ]);
+
         setIsSubmitting(false);
+
         if (result.success) {
-            navigate('/medicines');
+            setTabletState('success');
+            localStorage.setItem('justLoggedIn', 'true');
+            // Allow success animation to complete before navigating
+            setTimeout(() => {
+                navigate('/dashboard');
+            }, 1000);
         } else {
             setLocalError(result.message || 'Authentication failed. Please check your credentials.');
+            setTabletState('error');
+            setShouldShake(true);
+            setTimeout(() => setShouldShake(false), 500);
+        }
+    };
+
+    const handleFocus = (field) => {
+        setFocused(field);
+        if (tabletState !== 'error' && tabletState !== 'success' && tabletState !== 'loading') {
+            if (field === 'username') setTabletState('typing-username');
+            if (field === 'password') setTabletState('typing-password');
+        }
+    };
+
+    const handleBlur = () => {
+        setFocused(null);
+        if (tabletState !== 'error' && tabletState !== 'success' && tabletState !== 'loading') {
+            setTabletState('idle');
         }
     };
 
@@ -41,6 +90,17 @@ export default function Login() {
             className="min-h-screen w-screen flex items-center justify-center px-4 relative overflow-hidden"
             style={{ background: 'var(--canvas)' }}
         >
+            <style dangerouslySetInnerHTML={{ __html: `
+                @keyframes cardShake {
+                    0%, 100% { transform: translateX(0); }
+                    20%, 60% { transform: translateX(-8px); }
+                    40%, 80% { transform: translateX(8px); }
+                }
+                .shake-card {
+                    animation: cardShake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+                }
+            `}} />
+
             {/* Background glows */}
             <div
                 className="absolute pointer-events-none"
@@ -63,7 +123,7 @@ export default function Login() {
 
             {/* Card */}
             <div
-                className="w-full max-w-[400px] rounded-3xl p-8 relative animate-slide-up"
+                className={`w-full max-w-[420px] rounded-3xl p-8 relative animate-slide-up ${shouldShake ? 'shake-card' : ''}`}
                 style={{
                     background: 'rgba(15, 20, 32, 0.95)',
                     border: '1px solid rgba(255,255,255,0.08)',
@@ -78,27 +138,14 @@ export default function Login() {
                 />
 
                 {/* Logo + brand */}
-                <div className="flex flex-col items-center mb-10">
-                    <div
-                        className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5"
-                        style={{
-                            background: 'linear-gradient(135deg, rgba(0,194,204,0.2) 0%, rgba(0,119,168,0.15) 100%)',
-                            border: '1px solid rgba(0,194,204,0.3)',
-                            boxShadow: '0 0 24px rgba(0,194,204,0.15)',
-                        }}
-                    >
-                        <span
-                            className="material-symbols-rounded text-2xl"
-                            style={{ color: '#00c2cc', fontVariationSettings: "'FILL' 1" }}
-                        >
-                            medication
-                        </span>
-                    </div>
+                <div className="flex flex-col items-center mb-6">
+                    {/* Cute responsive tablet animation */}
+                    <TabletIllustration state={tabletState} />
 
-                    <h1 className="text-xl font-bold mb-1.5" style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
-                        Welcome back
+                    <h1 className="text-xl font-bold mt-2 mb-1" style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+                        Welcome Back
                     </h1>
-                    <p className="text-sm text-center" style={{ color: 'var(--text-secondary)' }}>
+                    <p className="text-xs text-center" style={{ color: 'var(--text-secondary)' }}>
                         Sign in to SMAART Pharmacy Platform
                     </p>
                 </div>
@@ -106,7 +153,7 @@ export default function Login() {
                 {/* Error state */}
                 {displayError && (
                     <div
-                        className="flex items-center gap-3 p-3.5 rounded-xl mb-6 text-sm animate-fade-in"
+                        className="flex items-center gap-3 p-3 rounded-xl mb-5 text-xs animate-fade-in"
                         style={{
                             background: 'rgba(248, 113, 113, 0.08)',
                             border: '1px solid rgba(248, 113, 113, 0.2)',
@@ -114,7 +161,7 @@ export default function Login() {
                         }}
                     >
                         <span className="material-symbols-rounded text-base flex-shrink-0" style={{ color: '#f87171' }}>error</span>
-                        <span className="text-xs font-medium">{displayError}</span>
+                        <span className="font-medium">{displayError}</span>
                     </div>
                 )}
 
@@ -138,8 +185,8 @@ export default function Login() {
                                 placeholder="Enter your username"
                                 value={username}
                                 onChange={e => setUsername(e.target.value)}
-                                onFocus={() => setFocused('username')}
-                                onBlur={() => setFocused(null)}
+                                onFocus={() => handleFocus('username')}
+                                onBlur={handleBlur}
                                 className="w-full pl-10 pr-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 outline-none"
                                 style={{
                                     background: focused === 'username' ? 'rgba(0,194,204,0.05)' : 'rgba(255,255,255,0.04)',
@@ -170,8 +217,8 @@ export default function Login() {
                                 placeholder="Enter your password"
                                 value={password}
                                 onChange={e => setPassword(e.target.value)}
-                                onFocus={() => setFocused('password')}
-                                onBlur={() => setFocused(null)}
+                                onFocus={() => handleFocus('password')}
+                                onBlur={handleBlur}
                                 className="w-full pl-10 pr-12 py-3 rounded-xl text-sm font-medium transition-all duration-200 outline-none"
                                 style={{
                                     background: focused === 'password' ? 'rgba(0,194,204,0.05)' : 'rgba(255,255,255,0.04)',
@@ -195,26 +242,31 @@ export default function Login() {
                         </div>
                     </div>
 
-                    {/* Submit */}
+                    {/* Submit Button */}
                     <button
                         id="login-submit"
                         type="submit"
                         disabled={isSubmitting}
                         className="mt-2 w-full py-3.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{
-                            background: isSubmitting
+                            background: isSubmitting || tabletState === 'success'
                                 ? 'rgba(0,194,204,0.5)'
                                 : 'linear-gradient(135deg, #00c2cc 0%, #0099a8 100%)',
                             color: '#0a0d14',
-                            boxShadow: isSubmitting ? 'none' : '0 4px 24px rgba(0,194,204,0.3)',
+                            boxShadow: isSubmitting || tabletState === 'success' ? 'none' : '0 4px 24px rgba(0,194,204,0.3)',
                         }}
-                        onMouseEnter={e => { if (!isSubmitting) e.currentTarget.style.boxShadow = '0 4px 32px rgba(0,194,204,0.45)'; }}
-                        onMouseLeave={e => { if (!isSubmitting) e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,194,204,0.3)'; }}
+                        onMouseEnter={e => { if (!isSubmitting && tabletState !== 'success') e.currentTarget.style.boxShadow = '0 4px 32px rgba(0,194,204,0.45)'; }}
+                        onMouseLeave={e => { if (!isSubmitting && tabletState !== 'success') e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,194,204,0.3)'; }}
                     >
                         {isSubmitting ? (
                             <>
-                                <span className="material-symbols-rounded animate-spin text-base">sync</span>
+                                <TabletLoader size={16} color="#0a0d14" />
                                 <span>Authenticating…</span>
+                            </>
+                        ) : tabletState === 'success' ? (
+                            <>
+                                <span className="material-symbols-rounded text-base">check_circle</span>
+                                <span>Success!</span>
                             </>
                         ) : (
                             <>
@@ -225,11 +277,13 @@ export default function Login() {
                     </button>
                 </form>
 
+
                 {/* Footer note */}
-                <p className="mt-8 text-center text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                <p className="mt-6 text-center text-[11px]" style={{ color: 'var(--text-muted)' }}>
                     Session-based authentication · Cookies required
                 </p>
             </div>
         </div>
     );
 }
+

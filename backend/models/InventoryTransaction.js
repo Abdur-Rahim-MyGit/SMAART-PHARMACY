@@ -11,7 +11,8 @@ const inventoryTransactionSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Pharmacy',
         required: true,
-        index: true
+        index: true,
+        alias: 'branchId'
     },
     userId: {
         type: mongoose.Schema.Types.ObjectId,

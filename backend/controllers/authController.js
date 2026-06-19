@@ -13,6 +13,13 @@ export const login = async (req, res) => {
             return res.status(401).json({ message: 'Invalid username or password' });
         }
 
+        if (user.status === 'Disabled' || user.status === 'Inactive') {
+            return res.status(403).json({ message: 'This account is inactive or disabled. Please contact your system administrator.' });
+        }
+
+        user.lastLogin = new Date();
+        await user.save();
+
         const pharmacy = await Pharmacy.findById(user.pharmacyId);
         if (!pharmacy) {
             return res.status(404).json({ message: 'Associated pharmacy not found' });
@@ -70,3 +77,13 @@ export const getMe = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
+export const getPharmacies = async (req, res) => {
+    try {
+        const pharmacies = await Pharmacy.find({}, 'name address').sort({ name: 1 });
+        res.json(pharmacies);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+

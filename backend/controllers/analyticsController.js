@@ -5,6 +5,7 @@ import Alert from '../models/Alert.js';
 import ReorderRequest from '../models/ReorderRequest.js';
 import Pharmacy from '../models/Pharmacy.js';
 import User from '../models/User.js';
+import PurchaseOrder from '../models/PurchaseOrder.js';
 
 export const getDashboardData = async (req, res) => {
     try {
@@ -209,6 +210,98 @@ export const getDashboardData = async (req, res) => {
             `Recorded ${dailyTransactionsCount} stock movements today by branch operators.`
         ];
 
+        // 7. Critical Action Center Data Calculations
+        // 7.1 Pending/Delayed Supplier Orders (status is Ordered or In Transit, and expectedDeliveryDate is past today)
+        const delayedOrders = await PurchaseOrder.find({
+            pharmacyId,
+            status: { $in: ['Ordered', 'In Transit'] },
+            expectedDeliveryDate: { $lt: new Date() }
+        }).populate('supplierId', 'name contactPerson phone email');
+
+        const delayedOrdersCount = delayedOrders.length;
+        const delayedOrdersValue = delayedOrders.reduce((sum, po) => sum + po.totalCost, 0);
+
+        // 7.2 Compliance Issues calculations
+        const medicinesMissingInfo = await Medicine.countDocuments({
+            pharmacyId,
+            status: { $ne: 'Archived' },
+            $or: [
+                { ndc: { $in: [null, ''] } },
+                { category: { $in: [null, ''] } },
+                { price: { $in: [null, 0] } }
+            ]
+        });
+
+        const medicinesMissingExpiry = await Medicine.countDocuments({
+            pharmacyId,
+            status: { $ne: 'Archived' },
+            expiryDate: { $exists: false }
+        });
+
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const transactionsMissingBatch = await InventoryTransaction.countDocuments({
+            pharmacyId,
+            transactionType: 'Stock In',
+            createdAt: { $gte: thirtyDaysAgo },
+            $or: [
+                { batchNumber: { $in: [null, ''] } }
+            ]
+        });
+
+        // 7.3 Branches Requiring Attention (Admin only)
+        let lowHealthBranches = [];
+        if (req.user.role === 'Admin') {
+            const activeBranches = await Pharmacy.find({ status: 'Active' });
+            
+            for (const b of activeBranches) {
+                const meds = await Medicine.find({ pharmacyId: b._id, status: { $ne: 'Archived' } });
+                
+                let outOfStock = 0;
+                let lowStock = 0;
+                const branchExpiryAlerts = [];
+
+                meds.forEach(m => {
+                    const isZero = m.stock === 0;
+                    const reorderThreshold = m.reorderPoint !== undefined ? m.reorderPoint : 20;
+                    const isLow = m.stock > 0 && m.stock < reorderThreshold;
+
+                    if (m.status === 'Active') {
+                        if (isZero) outOfStock++;
+                        if (isLow) lowStock++;
+                    }
+
+                    if (m.expiryDate) {
+                        const expDate = new Date(m.expiryDate);
+                        if (expDate < today) {
+                            branchExpiryAlerts.push({ status: 'Expired', stock: m.stock });
+                        } else if (expDate <= thirtyDaysFromNow) {
+                            branchExpiryAlerts.push({ status: 'Near Expiry', stock: m.stock });
+                        }
+                    }
+                });
+
+                const expSKU = branchExpiryAlerts.filter(x => x.status === 'Expired' && x.stock > 0).length;
+                const nearExpSKU = branchExpiryAlerts.filter(x => x.status === 'Near Expiry' && x.stock > 0).length;
+
+                const expDed = Math.min(45, expSKU * 15);
+                const nearExpDed = Math.min(25, nearExpSKU * 5);
+                const oosDed = Math.min(20, outOfStock * 10);
+                const lsDed = Math.min(20, lowStock * 5);
+
+                const bHealthScore = Math.max(0, 100 - expDed - nearExpDed - oosDed - lsDed);
+
+                if (bHealthScore < 85) {
+                    lowHealthBranches.push({
+                        id: b._id,
+                        name: b.name,
+                        branchCode: b.branchCode,
+                        healthScore: bHealthScore
+                    });
+                }
+            }
+        }
+
         res.json({
             metrics: {
                 totalValuation,
@@ -217,6 +310,12 @@ export const getDashboardData = async (req, res) => {
                 lowStock: lowStockCount,
                 expired: expiredCount,
                 nearExpiry: nearExpiryCount,
+                expiredWithStock: expiredSKUCount,
+                nearExpiryWithStock: nearExpirySKUCount,
+                expiredDeduction,
+                nearExpiryDeduction,
+                outOfStockDeduction,
+                lowStockDeduction,
                 deadStockValue,
                 atRiskValue,
                 healthScore
@@ -227,7 +326,18 @@ export const getDashboardData = async (req, res) => {
             categoryData,
             dailyMovements,
             dbAlerts: dbAlertsList,
-            briefing
+            briefing,
+            criticalActionCenter: {
+                delayedOrdersCount,
+                delayedOrdersValue,
+                delayedOrders,
+                complianceIssues: {
+                    medicinesMissingInfo,
+                    medicinesMissingExpiry,
+                    transactionsMissingBatch
+                },
+                lowHealthBranches
+            }
         });
     } catch (err) {
         res.status(500).json({ message: err.message });

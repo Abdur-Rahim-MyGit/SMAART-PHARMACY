@@ -149,7 +149,7 @@ export default function TransactionDetails() {
                                 <div className="grid grid-cols-2 gap-3">
                                     {[['Batch / Lot', tx.batchNumber, true], ['Supplier', tx.supplier, false], ['Date Received', tx.receivedDate ? new Date(tx.receivedDate).toLocaleDateString() : new Date(tx.createdAt).toLocaleDateString(), false]].map(([label, val, mono]) => (
                                         <div key={label}>
-                                            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{label}</p>
+                                            <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{label}</p>
                                             <p className={`text-sm font-medium mt-0.5 ${mono ? 'font-mono' : ''}`} style={{ color: 'var(--text-primary)' }}>{val || '—'}</p>
                                         </div>
                                     ))}

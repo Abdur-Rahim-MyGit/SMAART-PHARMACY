@@ -77,10 +77,10 @@ export default function BranchComparison() {
             
             {/* Header */}
             <div className="flex flex-col gap-1">
-                <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-cyan-400">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-400">
                     System Administration
                 </span>
-                <h2 className="text-4xl md:text-5xl font-black tracking-tight text-white leading-none font-serif">
+                <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white leading-none font-serif">
                     Branch <span className="text-cyan-400">Comparison</span>
                 </h2>
                 <p className="text-xs text-slate-300">
@@ -99,7 +99,7 @@ export default function BranchComparison() {
                         <span className="text-3xl font-extrabold text-white tracking-tight font-serif">
                             ₹{systemValuation.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                         </span>
-                        <span className="text-[10px] font-bold uppercase tracking-[0.08em] mt-0.5 text-slate-400">Total System Valuation</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wide mt-0.5 text-slate-400">Total System Valuation</span>
                     </div>
                 </div>
 
@@ -112,7 +112,7 @@ export default function BranchComparison() {
                         <span className="text-3xl font-extrabold text-emerald-400 tracking-tight font-serif">
                             {averageHealth}%
                         </span>
-                        <span className="text-[10px] font-bold uppercase tracking-[0.08em] mt-0.5 text-slate-400">Average Branch Health</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wide mt-0.5 text-slate-400">Average Branch Health</span>
                     </div>
                 </div>
 
@@ -125,7 +125,7 @@ export default function BranchComparison() {
                         <span className="text-3xl font-extrabold text-red-400 tracking-tight font-serif">
                             ₹{systemDeadStock.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                         </span>
-                        <span className="text-[10px] font-bold uppercase tracking-[0.08em] mt-0.5 text-slate-400">System Dead Stock Value</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wide mt-0.5 text-slate-400">System Dead Stock Value</span>
                     </div>
                 </div>
             </div>
@@ -135,8 +135,9 @@ export default function BranchComparison() {
                 <div className="overflow-x-auto scrollable">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="border-b border-white/5 bg-white/[0.02] text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                                <th className="p-4 pl-6">Branch Name</th>
+                            <tr className="border-b border-white/5 bg-white/[0.02] text-[11px] uppercase font-bold text-slate-400 tracking-wider">
+                                <th className="p-4 pl-6 text-center w-[70px]">Rank</th>
+                                <th className="p-4">Branch Name</th>
                                 <th className="p-4">Location Address</th>
                                 <th className="p-4 text-center">Health Score</th>
                                 <th className="p-4 text-right">Inventory Valuation</th>
@@ -148,14 +149,16 @@ export default function BranchComparison() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/[0.03] text-xs font-semibold text-slate-300">
-                            {branches.map(b => {
+                            {[...branches].sort((a, b) => b.healthScore - a.healthScore).map((b, idx) => {
                                 const hColor = b.healthScore >= 90 ? 'text-emerald-400 bg-emerald-500/10' : b.healthScore >= 75 ? 'text-amber-400 bg-amber-500/10' : 'text-red-400 bg-red-500/10';
+                                const medal = idx === 0 ? '🥇 #1' : idx === 1 ? '🥈 #2' : idx === 2 ? '🥉 #3' : `#${idx + 1}`;
                                 return (
                                     <tr key={b.pharmacyId} className="hover:bg-white/[0.01] transition-all">
-                                        <td className="p-4 pl-6 text-white font-serif text-sm">{b.name}</td>
+                                        <td className="p-4 pl-6 text-center font-bold text-slate-300 font-mono text-xs">{medal}</td>
+                                        <td className="p-4 text-white font-serif text-sm">{b.name}</td>
                                         <td className="p-4 text-[11px] text-slate-400 max-w-[200px] truncate" title={b.address}>{b.address || 'N/A'}</td>
                                         <td className="p-4 text-center">
-                                            <span className={`px-2 py-0.5 rounded text-[10px] font-black ${hColor}`}>
+                                            <span className={`px-2 py-0.5 rounded text-[11px] font-black ${hColor}`}>
                                                 {b.healthScore}%
                                             </span>
                                         </td>
@@ -165,17 +168,17 @@ export default function BranchComparison() {
                                         <td className="p-4 text-center text-slate-400">{b.userCount}</td>
                                         <td className="p-4 text-center">
                                             {b.alertCount > 0 ? (
-                                                <span className="bg-red-500/20 text-red-400 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                                                <span className="bg-red-500/20 text-red-400 text-[11px] px-2 py-0.5 rounded-full font-bold">
                                                     {b.alertCount} Active
                                                 </span>
                                             ) : (
-                                                <span className="text-slate-500 text-[10px]">None</span>
+                                                <span className="text-slate-500 text-[11px]">None</span>
                                             )}
                                         </td>
                                         <td className="p-4 pr-6 text-center">
                                             <button 
                                                 onClick={() => handleInspectBranch(b.pharmacyId, b.name)}
-                                                className="px-3 py-1.5 rounded bg-cyan-400 text-slate-900 hover:bg-cyan-300 text-[10px] font-black cursor-pointer shadow-lg shadow-cyan-400/10 hover:shadow-cyan-400/25 transition-all"
+                                                className="px-3 py-1.5 rounded bg-cyan-400 text-slate-900 hover:bg-cyan-300 text-[11px] font-black cursor-pointer shadow-lg shadow-cyan-400/10 hover:shadow-cyan-400/25 transition-all"
                                             >
                                                 Inspect Branch
                                             </button>

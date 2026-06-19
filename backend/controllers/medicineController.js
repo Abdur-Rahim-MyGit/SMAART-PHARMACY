@@ -25,7 +25,7 @@ export const getMedicines = async (req, res) => {
     }
 };
 
-// Retrieve a single medicine record with tenant verification
+// Retrieve a single medicine record with tenant verification and substitute finder
 export const getMedicineById = async (req, res) => {
     try {
         const medicine = await Medicine.findOne({
@@ -36,7 +36,28 @@ export const getMedicineById = async (req, res) => {
         if (!medicine) {
             return res.status(404).json({ message: 'Medicine not found' });
         }
-        res.json(medicine);
+
+        // Find similar medicines in-stock in the same category
+        const similarInDb = await Medicine.find({
+            pharmacyId: req.user.pharmacyId,
+            category: medicine.category,
+            _id: { $ne: medicine._id },
+            status: 'Active',
+            stock: { $gt: 0 }
+        }).limit(3);
+
+        let substitutes = similarInDb.map(m => m.name);
+
+        // Standard brand name fallbacks for Paracetamol
+        if (medicine.name.toLowerCase().includes('paracetamol')) {
+            const standardSubstitutes = ['Dolo 650', 'Calpol 650', 'Crocin Advance'];
+            substitutes = [...new Set([...substitutes, ...standardSubstitutes])].slice(0, 3);
+        }
+
+        res.json({
+            ...medicine.toObject(),
+            substitutes
+        });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

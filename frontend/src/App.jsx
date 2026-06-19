@@ -15,6 +15,15 @@ import Dashboard from './pages/Dashboard';
 import ExpiryDashboard from './pages/ExpiryDashboard';
 import BranchComparison from './pages/BranchComparison';
 import ReorderIntelligence from './pages/ReorderIntelligence';
+import Pharmacies from './pages/Pharmacies';
+import BranchProfile from './pages/BranchProfile';
+import Users from './pages/Users';
+import UserProfile from './pages/UserProfile';
+import Suppliers from './pages/Suppliers';
+import SupplierProfile from './pages/SupplierProfile';
+import PurchaseOrders from './pages/PurchaseOrders';
+import RevenueAnalytics from './pages/RevenueAnalytics';
+import EmergencySupport from './pages/EmergencySupport';
 
 export default function App() {
     return (
@@ -38,6 +47,15 @@ export default function App() {
                             <Route path="/expiry-dashboard" element={<ExpiryDashboard />} />
                             <Route path="/branch-comparison" element={<BranchComparison />} />
                             <Route path="/reorder-intelligence" element={<ReorderIntelligence />} />
+                            <Route path="/pharmacies" element={<Pharmacies />} />
+                            <Route path="/pharmacies/:id" element={<BranchProfile />} />
+                            <Route path="/users" element={<Users />} />
+                            <Route path="/users/:id" element={<UserProfile />} />
+                            <Route path="/suppliers" element={<Suppliers />} />
+                            <Route path="/suppliers/:id" element={<SupplierProfile />} />
+                            <Route path="/purchase-orders" element={<PurchaseOrders />} />
+                            <Route path="/revenue" element={<RevenueAnalytics />} />
+                            <Route path="/emergency-support" element={<EmergencySupport />} />
                             
                             {/* Fallback routes redirection */}
                             <Route path="*" element={<Navigate to="/dashboard" replace />} />

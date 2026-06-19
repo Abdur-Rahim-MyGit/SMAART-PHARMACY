@@ -42,7 +42,7 @@ function TransactionRow({ t, onView }) {
                         >
                             {t.medicineId.name}
                         </span>
-                        <span className="text-[10px] font-mono tracking-wider mt-0.5 opacity-60" style={{ color: 'var(--text-muted)' }}>
+                        <span className="text-[11px] font-mono tracking-wider mt-0.5 opacity-60" style={{ color: 'var(--text-muted)' }}>
                             {t.medicineId.ndc}
                         </span>
                     </>
@@ -56,7 +56,7 @@ function TransactionRow({ t, onView }) {
                 <span className="text-xs font-semibold text-white">
                     {new Date(t.createdAt).toLocaleDateString()}
                 </span>
-                <span className="text-[10px] opacity-60" style={{ color: 'var(--text-muted)' }}>
+                <span className="text-[11px] opacity-60" style={{ color: 'var(--text-muted)' }}>
                     {new Date(t.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
             </div>
@@ -64,7 +64,7 @@ function TransactionRow({ t, onView }) {
             {/* Type badge */}
             <div>
                 <span
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-bold"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold"
                     style={{ background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.color }}
                 >
                     <span className="material-symbols-rounded text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>{cfg.icon}</span>
@@ -82,7 +82,7 @@ function TransactionRow({ t, onView }) {
             {/* User */}
             <div>
                 <div
-                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-bold"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold"
                     style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', color: 'var(--text-secondary)' }}
                 >
                     <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#00c2cc' }} />
@@ -98,7 +98,7 @@ function TransactionRow({ t, onView }) {
                     </span>
                 )}
                 {t.notes && (
-                    <span className="text-[10px] block truncate opacity-60" style={{ color: 'var(--text-muted)' }}>
+                    <span className="text-[11px] block truncate opacity-60" style={{ color: 'var(--text-muted)' }}>
                         {t.notes}
                     </span>
                 )}
@@ -108,9 +108,9 @@ function TransactionRow({ t, onView }) {
             <div className="flex justify-end" onClick={e => e.stopPropagation()}>
                 <button
                     onClick={() => onView(t._id)}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[9px] font-bold cursor-pointer transition-all duration-200 opacity-0 group-hover:opacity-100 bg-white/[0.03] hover:bg-[#00c2cc]/10 text-white/60 hover:text-[#00c2cc] border border-white/[0.05] hover:border-[#00c2cc]/20"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-all duration-200 opacity-0 group-hover:opacity-100 bg-white/[0.03] hover:bg-[#00c2cc]/10 text-white/60 hover:text-[#00c2cc] border border-white/[0.05] hover:border-[#00c2cc]/20"
                 >
-                    <span className="material-symbols-rounded text-[10px]">receipt_long</span>
+                    <span className="material-symbols-rounded text-[11px]">receipt_long</span>
                     <span>Detail</span>
                 </button>
             </div>
@@ -190,8 +190,8 @@ export default function InventoryHistory() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex flex-col gap-0.5">
-                    <span className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--brand)' }}>Inventory Ledger</span>
-                    <h2 className="text-4xl md:text-[50px] font-black tracking-tighter text-white mt-0.5" style={{ fontFamily: "'Lora', serif" }}>
+                    <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--brand)' }}>Inventory Ledger</span>
+                    <h2 className="text-2xl md:text-3xl font-black tracking-tighter text-white mt-0.5" style={{ fontFamily: "'Lora', serif" }}>
                         Stock Movements
                     </h2>
                     <p className="text-[13px]" style={{ color: 'var(--text-secondary)' }}>
@@ -234,7 +234,7 @@ export default function InventoryHistory() {
                         style={{ background: 'rgba(15,20,32,0.3)' }}
                     >
                         <div className="flex items-center justify-between">
-                            <span className="text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--text-secondary)' }}>{m.label}</span>
+                            <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>{m.label}</span>
                             <div className="w-7 h-7 rounded-md flex items-center justify-center" style={{ background: `${m.color}08` }}>
                                <span className="material-symbols-rounded text-base" style={{ color: m.color, fontVariationSettings: "'FILL' 1" }}>{m.icon}</span>
                             </div>
@@ -242,7 +242,7 @@ export default function InventoryHistory() {
 
                         <div className="flex flex-col mt-3">
                             <span className="text-3xl md:text-[38px] font-black tracking-tighter" style={{ color: m.color, fontFamily: "'Lora', serif", leading: 'none' }}>{m.value}</span>
-                            <span className="text-[9px] opacity-50 mt-0.5" style={{ color: 'var(--text-muted)' }}>{m.desc}</span>
+                            <span className="text-[11px] opacity-50 mt-0.5" style={{ color: 'var(--text-muted)' }}>{m.desc}</span>
                         </div>
                     </div>
                 ))}
@@ -281,7 +281,7 @@ export default function InventoryHistory() {
                             <button
                                 key={f}
                                 onClick={() => setTypeFilter(f)}
-                                className="px-3 py-1 rounded-md text-[10px] font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap"
+                                className="px-3 py-1 rounded-md text-[11px] font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap"
                                 style={{
                                     background: isActive ? (cfg ? `${cfg.color}15` : 'rgba(0,194,204,0.1)') : 'transparent',
                                     color: isActive ? (cfg ? cfg.color : '#00c2cc') : 'var(--text-secondary)',
@@ -309,7 +309,7 @@ export default function InventoryHistory() {
             >
                 {/* Table header */}
                 <div
-                    className="grid px-6 py-3 text-[9px] font-bold uppercase tracking-[0.12em]"
+                    className="grid px-6 py-3 text-[11px] font-bold uppercase tracking-wide"
                     style={{
                         gridTemplateColumns: '1.8fr 1fr 1.1fr 90px 1fr 1.2fr 80px',
                         gap: '16px',
@@ -345,7 +345,7 @@ export default function InventoryHistory() {
                             <span className="material-symbols-rounded text-4xl opacity-50">history</span>
                             <div className="text-center">
                                 <span className="text-xs font-bold block" style={{ color: 'var(--text-secondary)' }}>No transactions found</span>
-                                <span className="text-[10px] mt-1 block">Try recording a stock movement or adjust your filter query.</span>
+                                <span className="text-[11px] mt-1 block">Try recording a stock movement or adjust your filter query.</span>
                             </div>
                         </div>
                     ) : (
