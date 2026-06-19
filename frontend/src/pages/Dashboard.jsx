@@ -15,7 +15,7 @@ const CAT_ICONS = {
 
 export default function Dashboard() {
     const navigate = useNavigate();
-    const { activeBranch, user } = useAuth();
+    const { activeBranch, user, switchBranch } = useAuth();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -180,6 +180,101 @@ export default function Dashboard() {
         100
     );
 
+    const prioritiesList = [];
+
+    // 1. Critical Expiries (Red Alert)
+    const totalExpiringCount = (metrics.expiredWithStock || 0) + (metrics.nearExpiryWithStock || 0);
+    const totalExpiringValue = (metrics.deadStockValue || 0) + (metrics.atRiskValue || 0);
+    if (totalExpiringCount > 0) {
+        prioritiesList.push({
+            id: 'priority-expiries',
+            severity: 'critical',
+            badge: '🔴 Expiring Soon',
+            title: `${totalExpiringCount} medicines expired or expiring soon on shelves`,
+            impact: `Capital Loss: ₹${totalExpiringValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })} at risk`,
+            action: 'Return items to suppliers for refund, write off expired stock, or discount near-expiry items immediately.',
+            cta: 'View Expiries',
+            onAction: () => navigate('/expiry-dashboard'),
+            role: 'Manager / Pharmacist',
+            icon: 'hourglass_empty',
+            color: '#f87171'
+        });
+    }
+
+    // 2. Out of Stock / Low Stock (Orange Alert)
+    if (metrics.outOfStock > 0 || metrics.lowStock > 0) {
+        const titleParts = [];
+        if (metrics.outOfStock > 0) titleParts.push(`${metrics.outOfStock} items out of stock`);
+        if (metrics.lowStock > 0) titleParts.push(`${metrics.lowStock} running low`);
+        prioritiesList.push({
+            id: 'priority-stock',
+            severity: 'warning',
+            badge: '🟠 Stock Shortages',
+            title: titleParts.join(', '),
+            impact: 'Patient Outflow: Risking transaction drops and shelf empty gaps.',
+            action: 'Replenish inventory via auto-procurement recommendations and supplier restock logs.',
+            cta: 'Auto-Reorder',
+            onAction: () => navigate('/reorder-intelligence'),
+            role: 'Manager',
+            icon: 'shopping_cart',
+            color: '#f59e0b'
+        });
+    }
+
+    // 3. Delayed Supplier Shipments (Red Alert)
+    if (delayedOrdersCount > 0) {
+        prioritiesList.push({
+            id: 'priority-shipments',
+            severity: 'critical',
+            badge: '🔴 Delayed Shipments',
+            title: `${delayedOrdersCount} supplier shipments overdue`,
+            impact: `Capital Stuck: ₹${delayedOrdersValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })} in delayed orders`,
+            action: 'Inspect purchase order audit log and contact supplier accounts immediately to expedite dispatch.',
+            cta: 'Track Orders',
+            onAction: () => navigate('/purchase-orders'),
+            role: 'Manager',
+            icon: 'local_shipping',
+            color: '#f87171'
+        });
+    }
+
+    // 4. Compliance Trace Gaps (Yellow/Orange Alert)
+    if (hasCompliance) {
+        const totalComplianceIssues = (complianceIssues?.medicinesMissingInfo || 0) + 
+                                      (complianceIssues?.medicinesMissingExpiry || 0) + 
+                                      (complianceIssues?.transactionsMissingBatch || 0);
+        prioritiesList.push({
+            id: 'priority-compliance',
+            severity: 'warning',
+            badge: '🟡 Compliance Warnings',
+            title: `${totalComplianceIssues} trace records missing details`,
+            impact: 'Regulatory Action: Violated batches or missing expiry dates block trace audits.',
+            action: 'Export compliance list, identify items missing NDC code/price/expiry, and log correct batches.',
+            cta: 'Export CSV',
+            onAction: () => window.open('/api/compliance/export'),
+            role: 'Manager / Admin',
+            icon: 'gavel',
+            color: '#fcd34d'
+        });
+    }
+
+    // 5. Branch Health Alerts (Blue Alert - Admin only)
+    if (user?.role === 'Admin' && lowHealthBranches.length > 0) {
+        prioritiesList.push({
+            id: 'priority-health-admin',
+            severity: 'info',
+            badge: '🔵 Branch Health Alert',
+            title: `${lowHealthBranches.length} locations dropped below safety grade`,
+            impact: 'Network Quality: Branch health scores below 85% indicating operational inefficiency.',
+            action: 'Review branch-by-branch diagnostic summaries, check comparison charts, and request local audit.',
+            cta: 'Compare Branches',
+            onAction: () => navigate('/branch-comparison'),
+            role: 'Admin',
+            icon: 'storefront',
+            color: '#60a5fa'
+        });
+    }
+
     return (
         <div className="flex flex-col gap-6 max-w-7xl mx-auto animate-fade-in relative z-10 pb-12">
             
@@ -242,209 +337,331 @@ export default function Dashboard() {
                 </button>
             </div>
 
-            {/* ── Critical Action Center ── */}
-            <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                    <div className="flex flex-col gap-0.5">
-                        <span className="text-[11px] font-bold uppercase tracking-wide text-[#ef4444]">
-                            Urgent Actions
-                        </span>
-                        <h3 className="text-lg font-bold text-white font-serif">Critical Action Center</h3>
-                    </div>
-                </div>
-
-                {alerts.length === 0 ? (
-                    <div className="rounded-xl p-6 flex items-center gap-4 bg-emerald-500/[0.03] border border-emerald-500/15 shadow-md">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-500/10 text-emerald-400">
-                            <span className="material-symbols-rounded text-xl">check_circle</span>
-                        </div>
-                        <div className="flex flex-col">
-                            <h4 className="text-sm font-bold text-white">All Systems Operational</h4>
-                            <p className="text-xs text-slate-400 mt-0.5">No critical issues or compliance warnings detected at this branch today.</p>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
-                        {alerts.map(alert => {
-                            const colors = {
-                                critical: { bg: 'bg-red-500/[0.03]', border: 'border-red-500/15', text: 'text-red-400', button: 'bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20', badge: '🔴 Critical' },
-                                warning: { bg: 'bg-amber-500/[0.03]', border: 'border-amber-500/15', text: 'text-amber-400', button: 'bg-amber-500/10 border-amber-500/20 text-amber-400 hover:bg-amber-500/20', badge: '🟠 Warning' },
-                                alert: { bg: 'bg-yellow-500/[0.03]', border: 'border-yellow-500/15', text: 'text-yellow-400', button: 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400 hover:bg-yellow-500/20', badge: '🟡 Compliance' },
-                                info: { bg: 'bg-sky-500/[0.03]', border: 'border-sky-500/15', text: 'text-sky-400', button: 'bg-sky-500/10 border-sky-500/20 text-sky-400 hover:bg-sky-500/20', badge: '🔵 Attention' },
-                            };
-                            const c = colors[alert.severity] || colors.info;
-
-                            let recommendedAction = '';
-                            if (alert.id === 'expiring-soon') {
-                                recommendedAction = 'Process returns, markdowns, or dispose of expired items.';
-                            } else if (alert.id === 'low-stock') {
-                                recommendedAction = 'Create a replenishment order immediately.';
-                            } else if (alert.id === 'delayed-orders') {
-                                recommendedAction = 'Contact the supplier coordinator to expedite delivery.';
-                            } else if (alert.id === 'compliance-issues') {
-                                recommendedAction = 'Update missing values or export compliance CSV to review logs.';
-                            } else {
-                                recommendedAction = 'Compare branch performances and inspect inventory gaps.';
-                            }
-
-                            return (
-                                <div key={alert.id} className={`rounded-xl p-5 flex flex-col gap-4 glass border shadow-lg relative overflow-hidden transition-all duration-300 hover:scale-[1.01] ${c.bg} ${c.border}`}>
-                                    {/* Top Info */}
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="flex flex-col min-w-0 flex-1">
-                                            <div className="flex items-center gap-2">
-                                                <span className={`text-[11px] font-black uppercase tracking-wider ${c.text}`}>
-                                                    {c.badge}
-                                                </span>
-                                            </div>
-                                            <h4 className="text-sm font-bold text-white mt-1 font-serif truncate" title={alert.title}>
-                                                {alert.title}
-                                            </h4>
-                                            <p className={`text-base font-extrabold tracking-tight mt-0.5 ${c.text}`}>
-                                                {alert.count}
-                                            </p>
-                                            <p className="text-[11px] text-slate-400 font-semibold truncate mt-0.5" title={alert.subtitle}>
-                                                {alert.subtitle}
-                                            </p>
-                                        </div>
-                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-white/5 ${c.text}`}>
-                                            <span className="material-symbols-rounded text-base">
-                                                {alert.icon}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Quick Action Button */}
-                                    <button
-                                        onClick={alert.onAction}
-                                        className={`mt-auto flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer border ${c.button}`}
-                                    >
-                                        <span>{alert.actionLabel}</span>
-                                        <span className="material-symbols-rounded text-sm">arrow_forward</span>
-                                    </button>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
-
-            {/* ── Today's Briefing Widget ── */}
-            {briefing && briefing.length > 0 && (
-                <div className="relative rounded-xl p-4 overflow-hidden glass border border-[#00c2cc]/15 shadow-lg shadow-[#00c2cc]/5">
-                    {/* Glowing highlight */}
-                    <div className="absolute -left-16 -top-16 w-32 h-32 rounded-full bg-[#00c2cc]/10 pointer-events-none filter blur-xl" />
-                    
-                    <div className="flex items-start gap-3 relative z-10">
-                        <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#00c2cc]/10 text-[#00c2cc]">
-                            <span className="material-symbols-rounded text-sm">auto_awesome</span>
-                        </div>
-                        <div className="flex-1 flex flex-col gap-1.5">
-                            <h4 className="text-[11px] font-bold uppercase tracking-wider text-sky-400 leading-none">Today's Executive Briefing</h4>
-                            <ul className="flex flex-col gap-1 text-[11px] text-slate-300 list-none font-medium">
-                                {briefing.map((line, idx) => (
-                                    <li key={idx} className="flex items-center gap-2">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-[#00c2cc]" />
-                                        <span>{line}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* ── Operational KPIs Grid ── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {/* Total Valuation */}
-                <div className="rounded-lg p-4 flex flex-col gap-2 relative overflow-hidden backdrop-blur-md"
+            {/* ── Sleek Stats Bar (Horizontal Row) ── */}
+            <div className="flex flex-wrap gap-4 items-center">
+                {/* Total Valuation Card */}
+                <div className="flex-1 min-w-[220px] rounded-xl p-4 flex items-center gap-3 backdrop-blur-md"
                     style={{ background: 'rgba(15,20,32,0.3)', border: '1px solid rgba(255,255,255,0.03)' }}>
-                    <div className="absolute top-0 right-0 w-24 h-24 pointer-events-none rounded-full"
-                        style={{ background: 'radial-gradient(circle, rgba(0, 194, 204, 0.03) 0%, transparent 70%)', filter: 'blur(15px)' }} />
-                    <div className="w-8 h-8 rounded-md flex items-center justify-center bg-[#00c2cc]/[0.04] text-[#00c2cc]">
-                        <span className="material-symbols-rounded text-base">payments</span>
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#00c2cc]/10 text-[#00c2cc]">
+                        <span className="material-symbols-rounded text-lg">payments</span>
                     </div>
-                    <div className="flex flex-col mt-1">
-                        <span className="text-2xl md:text-3xl font-extrabold text-white tracking-tight" style={{ fontFamily: "'Lora', serif" }}>
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Inventory Valuation</span>
+                        <span className="text-xl font-extrabold text-white font-serif" style={{ fontFamily: "'Lora', serif" }}>
                             ₹{metrics.totalValuation.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                         </span>
-                        <span className="text-[11px] font-bold uppercase tracking-wide mt-0.5" style={{ color: 'var(--text-secondary)' }}>Inventory Valuation</span>
                     </div>
                 </div>
 
-                {/* Inventory Health Score Card */}
-                <div 
-                    onClick={() => setShowHealthBreakdown(true)}
-                    className="rounded-lg p-4 flex items-center justify-between relative overflow-hidden backdrop-blur-md cursor-pointer transition-all duration-300 select-none group"
-                    style={{ 
-                        background: 'rgba(15,20,32,0.3)', 
-                        border: '1px solid rgba(255,255,255,0.03)' 
-                    }}
-                    title="Click to explain score calculation"
-                >
-                    <div className="flex flex-col">
-                        <span className="text-2xl md:text-3xl font-extrabold text-white tracking-tight" style={{ fontFamily: "'Lora', serif" }}>
-                            {metrics.healthScore || 0}%
-                        </span>
-                        <span className="text-[11px] font-bold uppercase tracking-wide mt-0.5" style={{ color: 'var(--text-secondary)' }}>Branch Health Score</span>
-                        <span className="text-[11px] font-bold text-cyan-400 opacity-80 group-hover:opacity-100 group-hover:text-cyan-300 mt-1.5 flex items-center gap-0.5 transition-all">
-                            <span>Explain Why?</span>
-                            <span className="material-symbols-rounded text-[11px]">info</span>
-                        </span>
-                    </div>
-                    {/* SVG Circle Gauge */}
-                    <div className="relative w-12 h-12 flex items-center justify-center flex-shrink-0">
-                        <svg className="w-full h-full transform -rotate-90">
-                            <circle cx="24" cy="24" r="20" stroke="rgba(255,255,255,0.03)" strokeWidth="3" fill="transparent" />
-                            <circle cx="24" cy="24" r="20" 
-                                stroke={
-                                    (metrics.healthScore || 0) >= 90 ? '#10b981' : 
-                                    (metrics.healthScore || 0) >= 75 ? '#f59e0b' : '#ef4444'
-                                } 
-                                strokeWidth="3" fill="transparent"
-                                strokeDasharray={2 * Math.PI * 20} 
-                                strokeDashoffset={2 * Math.PI * 20 - ((metrics.healthScore || 0) / 100) * 2 * Math.PI * 20} 
-                                strokeLinecap="round"
-                                className="transition-all duration-500 ease-out" />
-                        </svg>
-                        <span className="absolute text-[11px] font-black text-white">{(metrics.healthScore || 0)}</span>
-                    </div>
-                </div>
-
-                {/* Dead Stock Counter */}
-                <div className="rounded-lg p-4 flex flex-col gap-2 relative overflow-hidden backdrop-blur-md"
+                {/* Dead Stock Card */}
+                <div className="flex-1 min-w-[220px] rounded-xl p-4 flex items-center gap-3 backdrop-blur-md"
                     style={{ background: 'rgba(15,20,32,0.3)', border: '1px solid rgba(255,255,255,0.03)' }}>
-                    <div className="w-8 h-8 rounded-md flex items-center justify-center bg-red-400/[0.04] text-red-400">
-                        <span className="material-symbols-rounded text-base">event_busy</span>
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-red-500/10 text-red-400">
+                        <span className="material-symbols-rounded text-lg">event_busy</span>
                     </div>
-                    <div className="flex flex-col mt-1">
-                        <span className="text-2xl md:text-3xl font-extrabold text-red-400 tracking-tight" style={{ fontFamily: "'Lora', serif" }}>
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Dead Stock Value</span>
+                        <span className="text-xl font-extrabold text-red-400 font-serif" style={{ fontFamily: "'Lora', serif" }}>
                             ₹{(metrics.deadStockValue || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                        </span>
-                        <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wide mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-                            <span>Dead Stock Counter</span>
                             {metrics.atRiskValue > 0 && (
-                                <span className="text-[11px] text-amber-400 font-extrabold pl-1 select-none">
-                                    (₹{metrics.atRiskValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })} risk)
+                                <span className="text-[10px] text-amber-400 font-bold ml-2">
+                                    (₹{metrics.atRiskValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })} at risk)
                                 </span>
                             )}
-                        </div>
+                        </span>
                     </div>
                 </div>
 
-                {/* Catalog Channels */}
-                <div className="rounded-lg p-4 flex flex-col gap-2 relative overflow-hidden backdrop-blur-md"
+                {/* Catalog Channels Card */}
+                <div className="flex-1 min-w-[220px] rounded-xl p-4 flex items-center gap-3 backdrop-blur-md"
                     style={{ background: 'rgba(15,20,32,0.3)', border: '1px solid rgba(255,255,255,0.03)' }}>
-                    <div className="absolute top-0 right-0 w-24 h-24 pointer-events-none rounded-full"
-                        style={{ background: 'radial-gradient(circle, rgba(96, 165, 250, 0.03) 0%, transparent 70%)', filter: 'blur(15px)' }} />
-                    <div className="w-8 h-8 rounded-md flex items-center justify-center bg-blue-400/[0.04] text-blue-400">
-                        <span className="material-symbols-rounded text-base">medication</span>
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-blue-500/10 text-blue-400">
+                        <span className="material-symbols-rounded text-lg">medication</span>
                     </div>
-                    <div className="flex flex-col mt-1">
-                        <span className="text-2xl md:text-3xl font-extrabold text-white tracking-tight" style={{ fontFamily: "'Lora', serif" }}>
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Catalog Channels</span>
+                        <span className="text-xl font-extrabold text-white font-serif" style={{ fontFamily: "'Lora', serif" }}>
                             {metrics.activeChannels}
                         </span>
-                        <span className="text-[11px] font-bold uppercase tracking-wide mt-0.5" style={{ color: 'var(--text-secondary)' }}>Catalog Channels</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* ── Two-Column Command Grid ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* Left Column: Today's Priorities */}
+                <div className="lg:col-span-2 flex flex-col gap-4">
+                    <div className="flex flex-col gap-0.5">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#00c2cc]">
+                            OPERATIONAL QUEUE
+                        </span>
+                        <h3 className="text-lg font-bold text-white font-serif" style={{ fontFamily: "'Lora', serif" }}>
+                            Today's Priorities
+                        </h3>
+                        <p className="text-[11px] text-slate-400">
+                            Action-first checklist of critical items requiring immediate workflow execution.
+                        </p>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                        {prioritiesList.length === 0 ? (
+                            <div className="rounded-xl p-8 flex flex-col items-center justify-center text-center bg-emerald-500/[0.02] border border-emerald-500/15 shadow-md gap-2">
+                                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-emerald-500/10 text-emerald-400">
+                                    <span className="material-symbols-rounded text-2xl">check_circle</span>
+                                </div>
+                                <h4 className="text-sm font-bold text-white">All Systems Healthy</h4>
+                                <p className="text-xs text-slate-400 max-w-sm">No expiration, stockout, delayed shipment, or compliance warnings found for this branch today.</p>
+                            </div>
+                        ) : (
+                            prioritiesList.map(priority => {
+                                const borderColors = {
+                                    critical: 'border-l-4 border-l-red-500',
+                                    warning: 'border-l-4 border-l-amber-500',
+                                    info: 'border-l-4 border-l-sky-500'
+                                };
+                                const bgColors = {
+                                    critical: 'bg-red-500/[0.02] border-red-500/10',
+                                    warning: 'bg-amber-500/[0.02] border-amber-500/10',
+                                    info: 'bg-sky-500/[0.02] border-sky-500/10'
+                                };
+                                const textColors = {
+                                    critical: 'text-red-400',
+                                    warning: 'text-amber-400',
+                                    info: 'text-sky-400'
+                                };
+
+                                return (
+                                    <div 
+                                        key={priority.id} 
+                                        className={`rounded-xl p-5 flex flex-col sm:flex-row justify-between items-start gap-4 border backdrop-blur-md transition-all duration-200 hover:bg-white/[0.02] ${borderColors[priority.severity]} ${bgColors[priority.severity]}`}
+                                    >
+                                        <div className="flex gap-3 items-start min-w-0 flex-1">
+                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-white/5 ${textColors[priority.severity]}`}>
+                                                <span className="material-symbols-rounded text-base">{priority.icon}</span>
+                                            </div>
+                                            <div className="flex flex-col min-w-0 flex-1">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <span className={`text-[10px] font-black uppercase tracking-wider ${textColors[priority.severity]}`}>
+                                                        {priority.badge}
+                                                    </span>
+                                                    <span className="w-1 h-1 rounded-full bg-slate-600" />
+                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/5 text-slate-300">
+                                                        Assigned: {priority.role}
+                                                    </span>
+                                                </div>
+                                                <h4 className="text-sm font-bold text-white mt-1.5 leading-snug">
+                                                    {priority.title}
+                                                </h4>
+                                                
+                                                {/* Impact Info */}
+                                                <p className="text-xs font-semibold text-slate-300 mt-2 flex items-center gap-1.5">
+                                                    <span className="text-amber-400/90 text-sm">💡</span>
+                                                    <span>{priority.impact}</span>
+                                                </p>
+                                                
+                                                {/* Action Required */}
+                                                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                                                    <strong className="text-slate-300">Action:</strong> {priority.action}
+                                                </p>
+
+                                                {/* Inline Branch Select (for Admin Health alert) */}
+                                                {priority.id === 'priority-health-admin' && (
+                                                    <div className="mt-3 flex flex-col gap-1 max-w-xs">
+                                                        <label htmlFor="branch-health-select" className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                                                            Audit branch details:
+                                                        </label>
+                                                        <select 
+                                                            id="branch-health-select"
+                                                            className="px-2.5 py-1.5 rounded-lg text-xs bg-slate-900 border border-white/10 text-white font-medium focus:outline-none focus:border-[#00c2cc]"
+                                                            onChange={(e) => {
+                                                                const bId = e.target.value;
+                                                                const branch = lowHealthBranches.find(b => b.id === bId);
+                                                                if (branch) {
+                                                                    switchBranch(branch.id, branch.name);
+                                                                }
+                                                            }}
+                                                            value={activeBranch?.id || ''}
+                                                        >
+                                                            <option value="" disabled>Choose low-health branch...</option>
+                                                            {lowHealthBranches.map(b => (
+                                                                <option key={b.id} value={b.id}>
+                                                                    {b.name} ({b.healthScore}%)
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Action Button */}
+                                        <button
+                                            id={`${priority.id}-cta`}
+                                            onClick={priority.onAction}
+                                            className="w-full sm:w-auto self-stretch sm:self-center flex-shrink-0 flex items-center justify-center gap-1 px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/20"
+                                        >
+                                            <span>{priority.cta}</span>
+                                            <span className="material-symbols-rounded text-xs">arrow_forward</span>
+                                        </button>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                </div>
+
+                {/* Right Column: Branch Health Score Diagnostics */}
+                <div className="lg:col-span-1 flex flex-col gap-4">
+                    <div className="flex flex-col gap-0.5">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-teal-400">
+                            SCORE COMPLIANCE
+                        </span>
+                        <h3 className="text-lg font-bold text-white font-serif" style={{ fontFamily: "'Lora', serif" }}>
+                            Health Diagnostics
+                        </h3>
+                        <p className="text-[11px] text-slate-400">
+                            Current quality index and audit math audit breakdown.
+                        </p>
+                    </div>
+
+                    <div className="rounded-xl p-5 flex flex-col gap-5 backdrop-blur-md glass border border-white/10"
+                        style={{ background: 'rgba(15,20,32,0.3)' }}>
+                        
+                        {/* Circular Progress Gauge */}
+                        <div className="flex items-center gap-4 p-3.5 rounded-lg bg-white/[0.02] border border-white/5">
+                            <div className="relative w-16 h-16 flex items-center justify-center flex-shrink-0">
+                                <svg className="w-full h-full transform -rotate-90">
+                                    <circle cx="32" cy="32" r="28" stroke="rgba(255,255,255,0.03)" strokeWidth="4" fill="transparent" />
+                                    <circle cx="32" cy="32" r="28" 
+                                        stroke={
+                                            (metrics.healthScore || 0) >= 90 ? '#10b981' : 
+                                            (metrics.healthScore || 0) >= 75 ? '#f59e0b' : '#ef4444'
+                                        } 
+                                        strokeWidth="4" fill="transparent"
+                                        strokeDasharray={2 * Math.PI * 28} 
+                                        strokeDashoffset={2 * Math.PI * 28 - ((metrics.healthScore || 0) / 100) * 2 * Math.PI * 28} 
+                                        strokeLinecap="round"
+                                        className="transition-all duration-700 ease-out" 
+                                    />
+                                </svg>
+                                <span className="absolute text-sm font-black text-white">{(metrics.healthScore || 0)}%</span>
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Branch Health rating</span>
+                                <span className="text-xs font-bold text-white mt-0.5">
+                                    {(metrics.healthScore || 0) >= 90 ? '✅ Healthy Operations' : 
+                                     (metrics.healthScore || 0) >= 75 ? '⚠️ Needs Action' : '❌ Critical Attention'}
+                                </span>
+                                <p className="text-[10px] text-slate-400 mt-1 leading-tight">
+                                    Calculated from stockouts, expiries and reorder violations.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Deductions breakdown */}
+                        <div className="flex flex-col gap-2">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Score Audit Math</span>
+                            <div className="flex flex-col gap-2 text-[11px] bg-slate-950/40 rounded-lg p-3 border border-white/5 font-medium">
+                                <div className="flex justify-between items-center text-slate-300 font-semibold">
+                                    <span>Starting Base Score</span>
+                                    <span className="font-mono text-emerald-400">+100</span>
+                                </div>
+
+                                {/* Expired */}
+                                <div className="flex items-center justify-between border-t border-white/5 pt-1.5">
+                                    <div className="flex flex-col">
+                                        <span className="text-slate-300 font-medium">Expired Stock</span>
+                                        <span className="text-[9px] text-slate-500">-{metrics.expiredWithStock > 0 ? 15 : 0} pts/item ({metrics.expiredWithStock || 0} found)</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-mono text-red-400 font-bold">-{metrics.expiredDeduction || 0}</span>
+                                        {metrics.expiredWithStock > 0 && (
+                                            <button 
+                                                onClick={() => navigate('/expiry-dashboard')}
+                                                className="text-[9px] font-black text-red-400 bg-red-400/10 hover:bg-red-400/20 px-1.5 py-0.5 rounded cursor-pointer transition-all"
+                                            >
+                                                Fix
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Near Expiry */}
+                                <div className="flex items-center justify-between border-t border-white/5 pt-1.5">
+                                    <div className="flex flex-col">
+                                        <span className="text-slate-300 font-medium">Near-Expiry Stock</span>
+                                        <span className="text-[9px] text-slate-500">-{metrics.nearExpiryWithStock > 0 ? 5 : 0} pts/item ({metrics.nearExpiryWithStock || 0} found)</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-mono text-amber-500 font-bold">-{metrics.nearExpiryDeduction || 0}</span>
+                                        {metrics.nearExpiryWithStock > 0 && (
+                                            <button 
+                                                onClick={() => navigate('/expiry-dashboard')}
+                                                className="text-[9px] font-black text-amber-500 bg-amber-500/10 hover:bg-amber-500/20 px-1.5 py-0.5 rounded cursor-pointer transition-all"
+                                            >
+                                                Fix
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Out of Stock */}
+                                <div className="flex items-center justify-between border-t border-white/5 pt-1.5">
+                                    <div className="flex flex-col">
+                                        <span className="text-slate-300 font-medium">Out of Stock</span>
+                                        <span className="text-[9px] text-slate-500">-{metrics.outOfStock > 0 ? 10 : 0} pts/item ({metrics.outOfStock || 0} found)</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-mono text-red-400 font-bold">-{metrics.outOfStockDeduction || 0}</span>
+                                        {metrics.outOfStock > 0 && (
+                                            <button 
+                                                onClick={() => navigate('/reorder-intelligence')}
+                                                className="text-[9px] font-black text-red-400 bg-red-400/10 hover:bg-red-400/20 px-1.5 py-0.5 rounded cursor-pointer transition-all"
+                                            >
+                                                Fix
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Low Stock */}
+                                <div className="flex items-center justify-between border-t border-white/5 pt-1.5">
+                                    <div className="flex flex-col">
+                                        <span className="text-slate-300 font-medium">Low Stock</span>
+                                        <span className="text-[9px] text-slate-500">-{metrics.lowStock > 0 ? 5 : 0} pts/item ({metrics.lowStock || 0} found)</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-mono text-blue-400 font-bold">-{metrics.lowStockDeduction || 0}</span>
+                                        {metrics.lowStock > 0 && (
+                                            <button 
+                                                onClick={() => navigate('/reorder-intelligence')}
+                                                className="text-[9px] font-black text-blue-400 bg-blue-400/10 hover:bg-blue-400/20 px-1.5 py-0.5 rounded cursor-pointer transition-all"
+                                            >
+                                                Fix
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Total */}
+                                <div className="flex justify-between items-center border-t border-white/10 pt-2 font-bold text-white text-xs">
+                                    <span>Branch Health Score</span>
+                                    <span className="font-mono" style={{ color: (metrics.healthScore || 0) >= 90 ? '#10b981' : (metrics.healthScore || 0) >= 75 ? '#f59e0b' : '#ef4444' }}>
+                                        {(metrics.healthScore || 0)}%
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Audit Details Trigger */}
+                        <button 
+                            onClick={() => setShowHealthBreakdown(true)}
+                            className="flex items-center justify-center gap-1.5 py-2 w-full rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer bg-white/5 border border-white/10 text-white/80 hover:text-white hover:bg-white/10 hover:border-white/20"
+                        >
+                            <span className="material-symbols-rounded text-sm">assignment_turned_in</span>
+                            <span>Audit Detailed Calculations</span>
+                        </button>
                     </div>
                 </div>
             </div>
