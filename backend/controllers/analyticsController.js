@@ -424,3 +424,143 @@ export const getAdminBranchesComparison = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
+// GET /api/dashboard/priorities
+export const getDashboardPriorities = async (req, res) => {
+    try {
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
+
+        if (!pharmacyId) {
+            return res.json({ priorities: [] });
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const thirtyDaysFromNow = new Date();
+        thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+        thirtyDaysFromNow.setHours(23, 59, 59, 999);
+
+        // 1. Medicines expiring within 30 days
+        const expiringMeds = await Medicine.find({
+            pharmacyId,
+            status: { $ne: 'Archived' },
+            stock: { $gt: 0 },
+            expiryDate: { $lte: thirtyDaysFromNow }
+        });
+        const expiryCount = expiringMeds.length;
+        const expiryVal = expiringMeds.reduce((sum, m) => sum + (m.stock * m.price), 0);
+
+        // 2. Medicines below reorder point (currentStock <= reorderPoint)
+        const lowStockCount = await Medicine.countDocuments({
+            pharmacyId,
+            status: 'Active',
+            $expr: { $lte: ["$stock", "$reorderPoint"] }
+        });
+
+        // 3. Branch health score calculation
+        const meds = await Medicine.find({ pharmacyId, status: { $ne: 'Archived' } });
+        let outOfStock = 0;
+        let lowStock = 0;
+        let expiredSKU = 0;
+        let nearExpirySKU = 0;
+
+        meds.forEach(m => {
+            const isZero = m.stock === 0;
+            const reorderThreshold = m.reorderPoint !== undefined ? m.reorderPoint : 20;
+            const isLow = m.stock > 0 && m.stock < reorderThreshold;
+
+            if (m.status === 'Active') {
+                if (isZero) outOfStock++;
+                if (isLow) lowStock++;
+            }
+
+            if (m.expiryDate) {
+                const expDate = new Date(m.expiryDate);
+                if (expDate < today) {
+                    if (m.stock > 0) expiredSKU++;
+                } else if (expDate <= thirtyDaysFromNow) {
+                    if (m.stock > 0) nearExpirySKU++;
+                }
+            }
+        });
+
+        const expiredDeduction = Math.min(45, expiredSKU * 15);
+        const nearExpiryDeduction = Math.min(25, nearExpirySKU * 5);
+        const outOfStockDeduction = Math.min(20, outOfStock * 10);
+        const lowStockDeduction = Math.min(20, lowStock * 5);
+
+        const healthScore = Math.max(0, 100 - expiredDeduction - nearExpiryDeduction - outOfStockDeduction - lowStockDeduction);
+
+        let topReason = "General inventory imbalance";
+        let maxDeduction = 0;
+        if (expiredDeduction > maxDeduction) {
+            maxDeduction = expiredDeduction;
+            topReason = `${expiredSKU} expired medicines on shelves`;
+        }
+        if (nearExpiryDeduction > maxDeduction) {
+            maxDeduction = nearExpiryDeduction;
+            topReason = `${nearExpirySKU} medicines expiring within 30 days`;
+        }
+        if (outOfStockDeduction > maxDeduction) {
+            maxDeduction = outOfStockDeduction;
+            topReason = `${outOfStock} active medicines out of stock`;
+        }
+        if (lowStockDeduction > maxDeduction) {
+            maxDeduction = lowStockDeduction;
+            topReason = `${lowStock} medicines below safety stock levels`;
+        }
+
+        // Construct priorities feed
+        const priorities = [];
+
+        // Critical Expiries
+        if (expiryCount > 0) {
+            priorities.push({
+                type: "expiry",
+                severity: "critical",
+                title: `${expiryCount} medicine${expiryCount > 1 ? 's' : ''} expire${expiryCount === 1 ? 's' : ''} within 30 days`,
+                impact: `₹${expiryVal.toLocaleString('en-IN', { maximumFractionDigits: 0 })} at risk`,
+                action: "Review Expiry",
+                route: "/expiry-dashboard",
+                role: "Manager",
+                count: expiryCount
+            });
+        }
+
+        // Warning Reorders
+        if (lowStockCount > 0) {
+            priorities.push({
+                type: "reorder",
+                severity: "warning",
+                title: `${lowStockCount} medicine${lowStockCount > 1 ? 's' : ''} below safety stock limit`,
+                impact: "Patient Outflow: Empty shelf risk",
+                action: "Order Stock",
+                route: "/reorder-intelligence",
+                role: "Manager",
+                count: lowStockCount
+            });
+        }
+
+        // Watch Branch Health
+        if (healthScore < 70) {
+            priorities.push({
+                type: "branch_health",
+                severity: "watch",
+                title: `Branch health score dropped to ${healthScore}%`,
+                impact: `Reason: ${topReason}`,
+                action: "Review Branch",
+                route: "/branch-comparison",
+                role: "Admin",
+                count: 1
+            });
+        }
+
+        res.json({ priorities });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};

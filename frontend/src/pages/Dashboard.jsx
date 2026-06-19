@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import TodaysPriorities from '../components/TodaysPriorities';
 
 const CAT_COLORS = {
     Cardiovascular: '#f87171', 'Anti-infective': '#34d399', Endocrine: '#60a5fa',
@@ -180,101 +181,6 @@ export default function Dashboard() {
         100
     );
 
-    const prioritiesList = [];
-
-    // 1. Critical Expiries (Red Alert)
-    const totalExpiringCount = (metrics.expiredWithStock || 0) + (metrics.nearExpiryWithStock || 0);
-    const totalExpiringValue = (metrics.deadStockValue || 0) + (metrics.atRiskValue || 0);
-    if (totalExpiringCount > 0) {
-        prioritiesList.push({
-            id: 'priority-expiries',
-            severity: 'critical',
-            badge: '🔴 Expiring Soon',
-            title: `${totalExpiringCount} medicines expired or expiring soon on shelves`,
-            impact: `Capital Loss: ₹${totalExpiringValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })} at risk`,
-            action: 'Return items to suppliers for refund, write off expired stock, or discount near-expiry items immediately.',
-            cta: 'View Expiries',
-            onAction: () => navigate('/expiry-dashboard'),
-            role: 'Manager / Pharmacist',
-            icon: 'hourglass_empty',
-            color: '#f87171'
-        });
-    }
-
-    // 2. Out of Stock / Low Stock (Orange Alert)
-    if (metrics.outOfStock > 0 || metrics.lowStock > 0) {
-        const titleParts = [];
-        if (metrics.outOfStock > 0) titleParts.push(`${metrics.outOfStock} items out of stock`);
-        if (metrics.lowStock > 0) titleParts.push(`${metrics.lowStock} running low`);
-        prioritiesList.push({
-            id: 'priority-stock',
-            severity: 'warning',
-            badge: '🟠 Stock Shortages',
-            title: titleParts.join(', '),
-            impact: 'Patient Outflow: Risking transaction drops and shelf empty gaps.',
-            action: 'Replenish inventory via auto-procurement recommendations and supplier restock logs.',
-            cta: 'Auto-Reorder',
-            onAction: () => navigate('/reorder-intelligence'),
-            role: 'Manager',
-            icon: 'shopping_cart',
-            color: '#f59e0b'
-        });
-    }
-
-    // 3. Delayed Supplier Shipments (Red Alert)
-    if (delayedOrdersCount > 0) {
-        prioritiesList.push({
-            id: 'priority-shipments',
-            severity: 'critical',
-            badge: '🔴 Delayed Shipments',
-            title: `${delayedOrdersCount} supplier shipments overdue`,
-            impact: `Capital Stuck: ₹${delayedOrdersValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })} in delayed orders`,
-            action: 'Inspect purchase order audit log and contact supplier accounts immediately to expedite dispatch.',
-            cta: 'Track Orders',
-            onAction: () => navigate('/purchase-orders'),
-            role: 'Manager',
-            icon: 'local_shipping',
-            color: '#f87171'
-        });
-    }
-
-    // 4. Compliance Trace Gaps (Yellow/Orange Alert)
-    if (hasCompliance) {
-        const totalComplianceIssues = (complianceIssues?.medicinesMissingInfo || 0) + 
-                                      (complianceIssues?.medicinesMissingExpiry || 0) + 
-                                      (complianceIssues?.transactionsMissingBatch || 0);
-        prioritiesList.push({
-            id: 'priority-compliance',
-            severity: 'warning',
-            badge: '🟡 Compliance Warnings',
-            title: `${totalComplianceIssues} trace records missing details`,
-            impact: 'Regulatory Action: Violated batches or missing expiry dates block trace audits.',
-            action: 'Export compliance list, identify items missing NDC code/price/expiry, and log correct batches.',
-            cta: 'Export CSV',
-            onAction: () => window.open('/api/compliance/export'),
-            role: 'Manager / Admin',
-            icon: 'gavel',
-            color: '#fcd34d'
-        });
-    }
-
-    // 5. Branch Health Alerts (Blue Alert - Admin only)
-    if (user?.role === 'Admin' && lowHealthBranches.length > 0) {
-        prioritiesList.push({
-            id: 'priority-health-admin',
-            severity: 'info',
-            badge: '🔵 Branch Health Alert',
-            title: `${lowHealthBranches.length} locations dropped below safety grade`,
-            impact: 'Network Quality: Branch health scores below 85% indicating operational inefficiency.',
-            action: 'Review branch-by-branch diagnostic summaries, check comparison charts, and request local audit.',
-            cta: 'Compare Branches',
-            onAction: () => navigate('/branch-comparison'),
-            role: 'Admin',
-            icon: 'storefront',
-            color: '#60a5fa'
-        });
-    }
-
     return (
         <div className="flex flex-col gap-6 max-w-7xl mx-auto animate-fade-in relative z-10 pb-12">
             
@@ -405,109 +311,7 @@ export default function Dashboard() {
                     </div>
 
                     <div className="flex flex-col gap-3">
-                        {prioritiesList.length === 0 ? (
-                            <div className="rounded-xl p-8 flex flex-col items-center justify-center text-center bg-emerald-500/[0.02] border border-emerald-500/15 shadow-md gap-2">
-                                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-emerald-500/10 text-emerald-400">
-                                    <span className="material-symbols-rounded text-2xl">check_circle</span>
-                                </div>
-                                <h4 className="text-sm font-bold text-white">All Systems Healthy</h4>
-                                <p className="text-xs text-slate-400 max-w-sm">No expiration, stockout, delayed shipment, or compliance warnings found for this branch today.</p>
-                            </div>
-                        ) : (
-                            prioritiesList.map(priority => {
-                                const borderColors = {
-                                    critical: 'border-l-4 border-l-red-500',
-                                    warning: 'border-l-4 border-l-amber-500',
-                                    info: 'border-l-4 border-l-sky-500'
-                                };
-                                const bgColors = {
-                                    critical: 'bg-red-500/[0.02] border-red-500/10',
-                                    warning: 'bg-amber-500/[0.02] border-amber-500/10',
-                                    info: 'bg-sky-500/[0.02] border-sky-500/10'
-                                };
-                                const textColors = {
-                                    critical: 'text-red-400',
-                                    warning: 'text-amber-400',
-                                    info: 'text-sky-400'
-                                };
-
-                                return (
-                                    <div 
-                                        key={priority.id} 
-                                        className={`rounded-xl p-5 flex flex-col sm:flex-row justify-between items-start gap-4 border backdrop-blur-md transition-all duration-200 hover:bg-white/[0.02] ${borderColors[priority.severity]} ${bgColors[priority.severity]}`}
-                                    >
-                                        <div className="flex gap-3 items-start min-w-0 flex-1">
-                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-white/5 ${textColors[priority.severity]}`}>
-                                                <span className="material-symbols-rounded text-base">{priority.icon}</span>
-                                            </div>
-                                            <div className="flex flex-col min-w-0 flex-1">
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                    <span className={`text-[10px] font-black uppercase tracking-wider ${textColors[priority.severity]}`}>
-                                                        {priority.badge}
-                                                    </span>
-                                                    <span className="w-1 h-1 rounded-full bg-slate-600" />
-                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/5 text-slate-300">
-                                                        Assigned: {priority.role}
-                                                    </span>
-                                                </div>
-                                                <h4 className="text-sm font-bold text-white mt-1.5 leading-snug">
-                                                    {priority.title}
-                                                </h4>
-                                                
-                                                {/* Impact Info */}
-                                                <p className="text-xs font-semibold text-slate-300 mt-2 flex items-center gap-1.5">
-                                                    <span className="text-amber-400/90 text-sm">💡</span>
-                                                    <span>{priority.impact}</span>
-                                                </p>
-                                                
-                                                {/* Action Required */}
-                                                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                                                    <strong className="text-slate-300">Action:</strong> {priority.action}
-                                                </p>
-
-                                                {/* Inline Branch Select (for Admin Health alert) */}
-                                                {priority.id === 'priority-health-admin' && (
-                                                    <div className="mt-3 flex flex-col gap-1 max-w-xs">
-                                                        <label htmlFor="branch-health-select" className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                                                            Audit branch details:
-                                                        </label>
-                                                        <select 
-                                                            id="branch-health-select"
-                                                            className="px-2.5 py-1.5 rounded-lg text-xs bg-slate-900 border border-white/10 text-white font-medium focus:outline-none focus:border-[#00c2cc]"
-                                                            onChange={(e) => {
-                                                                const bId = e.target.value;
-                                                                const branch = lowHealthBranches.find(b => b.id === bId);
-                                                                if (branch) {
-                                                                    switchBranch(branch.id, branch.name);
-                                                                }
-                                                            }}
-                                                            value={activeBranch?.id || ''}
-                                                        >
-                                                            <option value="" disabled>Choose low-health branch...</option>
-                                                            {lowHealthBranches.map(b => (
-                                                                <option key={b.id} value={b.id}>
-                                                                    {b.name} ({b.healthScore}%)
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Action Button */}
-                                        <button
-                                            id={`${priority.id}-cta`}
-                                            onClick={priority.onAction}
-                                            className="w-full sm:w-auto self-stretch sm:self-center flex-shrink-0 flex items-center justify-center gap-1 px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/20"
-                                        >
-                                            <span>{priority.cta}</span>
-                                            <span className="material-symbols-rounded text-xs">arrow_forward</span>
-                                        </button>
-                                    </div>
-                                );
-                            })
-                        )}
+                        <TodaysPriorities branchId={activeBranch?.id} />
                     </div>
                 </div>
 
