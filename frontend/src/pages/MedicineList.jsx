@@ -302,7 +302,7 @@ function MedCard({ item, query, index, onView, onEdit }) {
 }
 
 export default function MedicineList() {
-    const { activeBranch } = useAuth();
+    const { activeBranch, user } = useAuth();
     const [medicines, setMedicines] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
