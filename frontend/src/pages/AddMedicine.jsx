@@ -6,7 +6,7 @@ const inputStyle = {
     background: 'rgba(255,255,255,0.03)',
     border: 'none',
     color: 'var(--text-primary)',
-    caretColor: '#00c2cc',
+    caretColor: '#00B4D8',
 };
 
 const inputFocusStyle = {
@@ -17,8 +17,8 @@ const inputFocusStyle = {
 function FormField({ label, required, children, fullWidth }) {
     return (
         <div className={`flex flex-col gap-1.5 ${fullWidth ? 'md:col-span-2' : ''}`}>
-            <label className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-                {label}{required && <span className="text-[#00c2cc] ml-0.5">*</span>}
+            <label className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                {label}{required && <span className="text-[#00B4D8] ml-0.5">*</span>}
             </label>
             {children}
         </div>
@@ -30,7 +30,7 @@ const CATEGORIES = ['General', 'Cardiovascular', 'Anti-infective', 'Endocrine', 
 const CATEGORY_COLORS = {
     Cardiovascular: '#f87171', 'Anti-infective': '#34d399', Endocrine: '#60a5fa',
     Emergency: '#f59e0b', Analgesic: '#a78bfa', Neurological: '#e879f9',
-    Gastrointestinal: '#22d3ee', General: '#00c2cc',
+    Gastrointestinal: '#22d3ee', General: '#00B4D8',
 };
 
 export default function AddMedicine() {
@@ -81,7 +81,7 @@ export default function AddMedicine() {
         style: focusedField === name ? { ...inputStyle, ...inputFocusStyle } : inputStyle,
     });
 
-    const catColor = CATEGORY_COLORS[formData.category] || '#00c2cc';
+    const catColor = CATEGORY_COLORS[formData.category] || '#00B4D8';
 
     return (
         <div className="max-w-2xl mx-auto flex flex-col gap-5 animate-fade-in relative">
@@ -90,8 +90,8 @@ export default function AddMedicine() {
                 style={{ background: 'radial-gradient(circle, rgba(0,194,204,0.03) 0%, transparent 70%)', filter: 'blur(45px)', zIndex: -1 }} />
 
             {/* Breadcrumb */}
-            <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-                <button onClick={() => navigate('/medicines')} className="hover:text-[#00c2cc] transition-colors cursor-pointer">
+            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                <button onClick={() => navigate('/medicines')} className="hover:text-[#00B4D8] transition-colors cursor-pointer">
                     Ledger
                 </button>
                 <span className="material-symbols-rounded text-sm">chevron_right</span>
@@ -100,7 +100,7 @@ export default function AddMedicine() {
 
             {/* Header */}
             <div className="flex flex-col gap-0.5">
-                <h2 className="text-3xl font-extrabold tracking-tight text-white" style={{ fontFamily: "'Lora', serif", letterSpacing: '-0.02em' }}>
+                <h2 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]" style={{ fontFamily: "'Lora', serif", letterSpacing: '-0.02em' }}>
                     Register <span className="text-sky-400">Medicine</span>
                 </h2>
                 <p className="text-[13px]" style={{ color: 'var(--text-secondary)' }}>
@@ -131,7 +131,7 @@ export default function AddMedicine() {
                         <span className="text-xs" style={{ color: catColor }}>{formData.category}</span>
                     </div>
                     {formData.price && (
-                        <span className="ml-auto text-base font-bold" style={{ color: '#00c2cc', fontFamily: "'Lora', serif" }}>
+                        <span className="ml-auto text-base font-bold" style={{ color: '#00B4D8', fontFamily: "'Lora', serif" }}>
                             ₹{Number(formData.price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                     )}
@@ -189,7 +189,7 @@ export default function AddMedicine() {
                     {/* Price */}
                     <FormField label="Unit Cost (₹)" required>
                         <div className="relative">
-                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold" style={{ color: '#00c2cc' }}>₹</span>
+                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold" style={{ color: '#00B4D8' }}>₹</span>
                             <input
                                 type="number"
                                 step="0.01"
@@ -265,7 +265,7 @@ export default function AddMedicine() {
                     className="flex items-start gap-2.5 p-3 rounded-lg"
                     style={{ background: 'rgba(0,194,204,0.03)' }}
                 >
-                    <span className="material-symbols-rounded text-sm mt-0.5" style={{ color: '#00c2cc', fontVariationSettings: "'FILL' 1" }}>info</span>
+                    <span className="material-symbols-rounded text-sm mt-0.5" style={{ color: '#00B4D8', fontVariationSettings: "'FILL' 1" }}>info</span>
                     <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                         Medicines are <strong style={{ color: 'var(--text-primary)' }}>never deleted</strong>. They are set to Active, Inactive, or Archived. Stock changes should always be recorded as transactions.
                     </span>
@@ -288,7 +288,7 @@ export default function AddMedicine() {
                         disabled={isSubmitting}
                         className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold cursor-pointer transition-all duration-200 disabled:opacity-50"
                         style={{
-                            background: 'linear-gradient(135deg, #00c2cc 0%, #0099a8 100%)',
+                            background: 'linear-gradient(135deg, #00B4D8 0%, #0099a8 100%)',
                             color: '#0a0d14',
                         }}
                     >

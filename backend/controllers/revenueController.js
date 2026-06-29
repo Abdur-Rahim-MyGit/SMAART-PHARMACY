@@ -44,6 +44,7 @@ export const getRevenueAnalytics = async (req, res) => {
                     pharmacyId: 1,
                     medicineId: 1,
                     name: '$medicine.name',
+                    category: '$medicine.category',
                     qty: { $abs: '$quantityChanged' },
                     price: '$medicine.price',
                     cost: { $ifNull: ['$medicine.supplierCost', { $multiply: ['$medicine.price', 0.7] }] },
@@ -55,6 +56,7 @@ export const getRevenueAnalytics = async (req, res) => {
                     pharmacyId: 1,
                     medicineId: 1,
                     name: 1,
+                    category: 1,
                     qty: 1,
                     revenue: { $multiply: ['$qty', '$price'] },
                     cogs: { $multiply: ['$qty', '$cost'] },
@@ -66,6 +68,7 @@ export const getRevenueAnalytics = async (req, res) => {
                     pharmacyId: 1,
                     medicineId: 1,
                     name: 1,
+                    category: 1,
                     qty: 1,
                     revenue: 1,
                     cogs: 1,
@@ -143,6 +146,20 @@ export const getRevenueAnalytics = async (req, res) => {
             });
         }
 
+        // 5. Aggregate Sales by Category
+        const categorySalesMap = {};
+        financeAgg.forEach(item => {
+            const cat = item.category || 'Other';
+            if (!categorySalesMap[cat]) {
+                categorySalesMap[cat] = { category: cat, revenue: 0, profit: 0, unitsSold: 0 };
+            }
+            categorySalesMap[cat].revenue += item.revenue;
+            categorySalesMap[cat].profit += item.profit;
+            categorySalesMap[cat].unitsSold += item.qty;
+        });
+        const categoryBreakdown = Object.values(categorySalesMap)
+            .sort((a, b) => b.revenue - a.revenue);
+
         res.json({
             metrics: {
                 totalRevenue,
@@ -152,6 +169,7 @@ export const getRevenueAnalytics = async (req, res) => {
             },
             monthlyTrends,
             topMedicines,
+            categoryBreakdown,
             branchPerformance
         });
     } catch (err) {

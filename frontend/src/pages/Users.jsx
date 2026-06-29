@@ -272,7 +272,7 @@ export default function Users() {
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center py-44 gap-3 text-slate-400">
+            <div className="flex flex-col items-center justify-center py-44 gap-3 text-[var(--text-secondary)]">
                 <span className="material-symbols-rounded animate-spin text-3xl text-cyan-400">sync</span>
                 <span className="text-sm">Fetching system user logs…</span>
             </div>
@@ -284,10 +284,10 @@ export default function Users() {
             <div className="flex flex-col items-center justify-center py-32 gap-4 max-w-md mx-auto text-center">
                 <span className="material-symbols-rounded text-5xl text-red-400">gavel</span>
                 <div>
-                    <h3 className="text-lg font-bold text-white font-serif">Access Violation</h3>
-                    <p className="text-xs mt-1 text-slate-400">{error}</p>
+                    <h3 className="text-lg font-bold text-[var(--text-primary)] font-serif">Access Violation</h3>
+                    <p className="text-xs mt-1 text-[var(--text-secondary)]">{error}</p>
                 </div>
-                <button onClick={() => navigate('/dashboard')} className="px-5 py-2 rounded-xl text-xs font-bold bg-white/5 border border-white/10 text-white cursor-pointer">
+                <button onClick={() => navigate('/dashboard')} className="px-5 py-2 rounded-xl text-xs font-bold bg-[var(--bg-secondary)] border border-[var(--card-border)] text-[var(--text-primary)] cursor-pointer">
                     Return to Dashboard
                 </button>
             </div>
@@ -299,13 +299,13 @@ export default function Users() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div className="flex flex-col gap-1">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-400">
+                    <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">
                         System Administration
                     </span>
-                    <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white leading-none font-serif">
+                    <h2 className="text-2xl md:text-3xl font-black tracking-tight text-[var(--text-primary)] leading-none font-serif">
                         User <span className="text-cyan-400">Management</span>
                     </h2>
-                    <p className="text-xs text-slate-300">
+                    <p className="text-xs text-[var(--text-secondary)]">
                         Provision new accounts, assign branch nodes, reset user credentials, and toggle system roles.
                     </p>
                 </div>
@@ -316,7 +316,7 @@ export default function Users() {
                     }}
                     className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-slate-950 hover:bg-cyan-300"
                     style={{
-                        background: 'linear-gradient(135deg, #00c2cc 0%, #0099a8 100%)',
+                        background: 'linear-gradient(135deg, #00B4D8 0%, #0099a8 100%)',
                         boxShadow: '0 4px 24px rgba(0,194,204,0.2)'
                     }}
                 >
@@ -328,89 +328,89 @@ export default function Users() {
             {/* KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {/* Total users */}
-                <div className="rounded-xl p-5 flex flex-col gap-2 relative overflow-hidden glass border border-white/5">
+                <div className="rounded-xl p-5 flex flex-col gap-2 relative overflow-hidden premium-card border border-[var(--card-border)]">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-cyan-400/[0.04] text-cyan-400">
                         <span className="material-symbols-rounded text-base">group</span>
                     </div>
                     <div className="flex flex-col mt-1">
-                        <span className="text-2xl font-extrabold text-white tracking-tight font-serif">{kpis.totalUsers}</span>
-                        <span className="text-[11px] font-bold uppercase tracking-wide mt-0.5 text-slate-400">Total Users</span>
+                        <span className="text-2xl font-extrabold text-[var(--text-primary)] tracking-tight font-serif">{kpis.totalUsers}</span>
+                        <span className="text-xs font-bold uppercase tracking-wide mt-0.5 text-[var(--text-secondary)]">Total Users</span>
                     </div>
                 </div>
 
                 {/* Active users */}
-                <div className="rounded-xl p-5 flex flex-col gap-2 relative overflow-hidden glass border border-white/5">
+                <div className="rounded-xl p-5 flex flex-col gap-2 relative overflow-hidden premium-card border border-[var(--card-border)]">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-emerald-400/[0.04] text-emerald-400">
                         <span className="material-symbols-rounded text-base">how_to_reg</span>
                     </div>
                     <div className="flex flex-col mt-1">
                         <span className="text-2xl font-extrabold text-emerald-400 tracking-tight font-serif">{kpis.activeUsers}</span>
-                        <span className="text-[11px] font-bold uppercase tracking-wide mt-0.5 text-slate-400">Active</span>
+                        <span className="text-xs font-bold uppercase tracking-wide mt-0.5 text-[var(--text-secondary)]">Active</span>
                     </div>
                 </div>
 
                 {/* Managers count */}
-                <div className="rounded-xl p-5 flex flex-col gap-2 relative overflow-hidden glass border border-white/5">
+                <div className="rounded-xl p-5 flex flex-col gap-2 relative overflow-hidden premium-card border border-[var(--card-border)]">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-violet-400/[0.04] text-violet-400">
                         <span className="material-symbols-rounded text-base">manage_accounts</span>
                     </div>
                     <div className="flex flex-col mt-1">
                         <span className="text-2xl font-extrabold text-violet-400 tracking-tight font-serif">{kpis.managers}</span>
-                        <span className="text-[11px] font-bold uppercase tracking-wide mt-0.5 text-slate-400">Managers</span>
+                        <span className="text-xs font-bold uppercase tracking-wide mt-0.5 text-[var(--text-secondary)]">Managers</span>
                     </div>
                 </div>
 
                 {/* Pharmacists count */}
-                <div className="rounded-xl p-5 flex flex-col gap-2 relative overflow-hidden glass border border-white/5">
+                <div className="rounded-xl p-5 flex flex-col gap-2 relative overflow-hidden premium-card border border-[var(--card-border)]">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-teal-400/[0.04] text-teal-400">
                         <span className="material-symbols-rounded text-base">medication</span>
                     </div>
                     <div className="flex flex-col mt-1">
                         <span className="text-2xl font-extrabold text-teal-400 tracking-tight font-serif">{kpis.pharmacists}</span>
-                        <span className="text-[11px] font-bold uppercase tracking-wide mt-0.5 text-slate-400">Pharmacists</span>
+                        <span className="text-xs font-bold uppercase tracking-wide mt-0.5 text-[var(--text-secondary)]">Pharmacists</span>
                     </div>
                 </div>
 
                 {/* Inactive accounts */}
-                <div className="rounded-xl p-5 flex flex-col gap-2 relative overflow-hidden glass border border-white/5">
+                <div className="rounded-xl p-5 flex flex-col gap-2 relative overflow-hidden premium-card border border-[var(--card-border)]">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-400/[0.04] text-red-400">
                         <span className="material-symbols-rounded text-base">block</span>
                     </div>
                     <div className="flex flex-col mt-1">
                         <span className="text-2xl font-extrabold text-red-400 tracking-tight font-serif">{kpis.inactiveUsers}</span>
-                        <span className="text-[11px] font-bold uppercase tracking-wide mt-0.5 text-slate-400">Inactive</span>
+                        <span className="text-xs font-bold uppercase tracking-wide mt-0.5 text-[var(--text-secondary)]">Inactive</span>
                     </div>
                 </div>
 
                 {/* Recently Added Users */}
-                <div className="rounded-xl p-5 flex flex-col gap-2 relative overflow-hidden glass border border-white/5">
+                <div className="rounded-xl p-5 flex flex-col gap-2 relative overflow-hidden premium-card border border-[var(--card-border)]">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-400/[0.04] text-amber-400">
                         <span className="material-symbols-rounded text-base">person_add</span>
                     </div>
                     <div className="flex flex-col mt-1">
                         <span className="text-2xl font-extrabold text-amber-400 tracking-tight font-serif">{kpis.recentlyAddedUsers}</span>
-                        <span className="text-[11px] font-bold uppercase tracking-wide mt-0.5 text-slate-400">Recently Added</span>
+                        <span className="text-xs font-bold uppercase tracking-wide mt-0.5 text-[var(--text-secondary)]">Recently Added</span>
                     </div>
                 </div>
             </div>
 
             {/* Search and Table Container */}
-            <div className="rounded-xl overflow-hidden glass border border-white/5 shadow-2xl flex flex-col">
+            <div className="rounded-xl overflow-hidden premium-card border border-[var(--card-border)] shadow-2xl flex flex-col">
                 {/* Search Bar & Filters */}
-                <div className="p-4 border-b border-white/5 bg-white/[0.01] flex flex-col md:flex-row md:items-center gap-4">
+                <div className="p-4 border-b border-[var(--card-border)] bg-[var(--bg-secondary)] flex flex-col md:flex-row md:items-center gap-4">
                     <div className="flex items-center gap-3 flex-1">
-                        <span className="material-symbols-rounded text-slate-400 text-lg">search</span>
+                        <span className="material-symbols-rounded text-[var(--text-secondary)] text-lg">search</span>
                         <input
                             type="text"
                             placeholder="Search users by name, role, phone, email, registration ID or branch..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
-                            className="flex-1 bg-transparent border-0 outline-none text-xs text-white placeholder-slate-500 font-medium"
+                            className="flex-1 bg-transparent border-0 outline-none text-xs text-[var(--text-primary)] placeholder-[var(--text-secondary)] font-medium"
                         />
                         {searchQuery && (
                             <button 
                                 onClick={() => setSearchQuery('')}
-                                className="text-slate-400 hover:text-white transition-colors cursor-pointer text-xs mr-2"
+                                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer text-xs mr-2"
                             >
                                 Clear
                             </button>
@@ -419,11 +419,11 @@ export default function Users() {
                     
                     {/* Role Filter */}
                     <div className="flex items-center gap-2">
-                        <span className="text-[11px] uppercase font-bold text-slate-500">Role:</span>
+                        <span className="text-xs uppercase font-bold text-[var(--text-secondary)]">Role:</span>
                         <select
                             value={roleFilter}
                             onChange={e => setRoleFilter(e.target.value)}
-                            className="px-3 py-1.5 bg-[#0f1420] border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400 cursor-pointer"
+                            className="px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 cursor-pointer"
                         >
                             <option value="All">All Roles</option>
                             <option value="Admin">Admin</option>
@@ -434,11 +434,11 @@ export default function Users() {
 
                     {/* Status Filter */}
                     <div className="flex items-center gap-2">
-                        <span className="text-[11px] uppercase font-bold text-slate-500">Status:</span>
+                        <span className="text-xs uppercase font-bold text-[var(--text-secondary)]">Status:</span>
                         <select
                             value={statusFilter}
                             onChange={e => setStatusFilter(e.target.value)}
-                            className="px-3 py-1.5 bg-[#0f1420] border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400 cursor-pointer"
+                            className="px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 cursor-pointer"
                         >
                             <option value="All">All Statuses</option>
                             <option value="Active">Active</option>
@@ -451,7 +451,7 @@ export default function Users() {
                 <div className="overflow-x-auto scrollable">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="border-b border-white/5 bg-white/[0.02] text-[11px] uppercase font-bold text-slate-400 tracking-wider">
+                            <tr className="border-b border-[var(--card-border)] bg-[var(--bg-secondary)] text-xs uppercase font-bold text-[var(--text-secondary)] tracking-wider">
                                 <th className="p-4 pl-6">Name & Credentials</th>
                                 <th className="p-4">Contact Info & Shift</th>
                                 <th className="p-4">Role</th>
@@ -461,10 +461,10 @@ export default function Users() {
                                 <th className="p-4 pr-6 text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/[0.03] text-xs font-semibold text-slate-300">
+                        <tbody className="divide-y divide-white/[0.03] text-xs font-semibold text-[var(--text-secondary)]">
                             {filteredUsers.length === 0 ? (
                                 <tr>
-                                    <td colSpan="7" className="p-10 text-center text-slate-500">
+                                    <td colSpan="7" className="p-10 text-center text-[var(--text-secondary)]">
                                         No users found.
                                     </td>
                                 </tr>
@@ -481,45 +481,45 @@ export default function Users() {
                                         : 'text-red-400 bg-red-500/10';
 
                                     return (
-                                        <tr key={u._id} className="hover:bg-white/[0.01] transition-all">
+                                        <tr key={u._id} className="hover:bg-[var(--bg-secondary)] transition-all">
                                             <td className="p-4 pl-6">
                                                 <div className="flex flex-col">
                                                     <span 
                                                         onClick={() => navigate(`/users/${u._id}`)}
-                                                        className="text-white font-serif text-sm font-bold hover:text-cyan-400 cursor-pointer transition-colors"
+                                                        className="text-[var(--text-primary)] font-serif text-sm font-bold hover:text-cyan-400 cursor-pointer transition-colors"
                                                     >
                                                         {u.fullName || 'N/A'}
                                                     </span>
-                                                    <span className="text-[11px] text-slate-500 font-mono mt-0.5">@{u.username}</span>
+                                                    <span className="text-xs text-[var(--text-secondary)] font-mono mt-0.5">@{u.username}</span>
                                                     {u.qualification && (
-                                                        <span className="text-[11px] text-slate-400 mt-1">
-                                                            Qual: <span className="font-extrabold text-[#00c2cc]">{u.qualification}</span>
+                                                        <span className="text-xs text-[var(--text-secondary)] mt-1">
+                                                            Qual: <span className="font-extrabold text-[#00B4D8]">{u.qualification}</span>
                                                             {u.registrationNumber && ` | Reg: ${u.registrationNumber}`}
                                                         </span>
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="p-4 text-slate-300 font-mono text-[11px]">
+                                            <td className="p-4 text-[var(--text-secondary)] font-mono text-xs">
                                                 <div className="flex flex-col">
                                                     <span>{u.phone || 'N/A'}</span>
-                                                    {u.email && <span className="text-[11px] text-slate-500 mt-0.5 font-sans lowercase">{u.email}</span>}
-                                                    <span className="text-[11px] text-violet-400 mt-1 font-sans font-bold capitalize">Shift: {u.shiftType || 'Day'}</span>
+                                                    {u.email && <span className="text-xs text-[var(--text-secondary)] mt-0.5 font-sans lowercase">{u.email}</span>}
+                                                    <span className="text-xs text-violet-400 mt-1 font-sans font-bold capitalize">Shift: {u.shiftType || 'Day'}</span>
                                                 </div>
                                             </td>
                                             <td className="p-4">
-                                                <span className={`px-2.5 py-0.5 rounded text-[11px] font-black tracking-wider uppercase ${roleColor}`}>
+                                                <span className={`px-2.5 py-0.5 rounded text-xs font-black tracking-wider uppercase ${roleColor}`}>
                                                     {u.role}
                                                 </span>
                                             </td>
-                                            <td className="p-4 text-slate-300 font-serif font-bold">
+                                            <td className="p-4 text-[var(--text-secondary)] font-serif font-bold">
                                                 {u.pharmacyId?.name || 'Unassigned'}
                                             </td>
                                             <td className="p-4 text-center">
-                                                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black tracking-wider uppercase ${statusColor}`}>
+                                                <span className={`px-2.5 py-0.5 rounded-full text-xs font-black tracking-wider uppercase ${statusColor}`}>
                                                     {u.status}
                                                 </span>
                                             </td>
-                                            <td className="p-4 text-slate-400 font-mono text-[11px]">
+                                            <td className="p-4 text-[var(--text-secondary)] font-mono text-xs">
                                                 {u.joinedDate ? new Date(u.joinedDate).toLocaleDateString('en-GB') : 'N/A'}
                                             </td>
                                             <td className="p-4 pr-6 text-right">
@@ -533,7 +533,7 @@ export default function Users() {
                                                     </button>
                                                     <button
                                                         onClick={() => openEdit(u)}
-                                                        className="p-1.5 rounded bg-[#00c2cc]/10 border border-[#00c2cc]/20 text-[#00c2cc] hover:bg-[#00c2cc]/20 cursor-pointer"
+                                                        className="p-1.5 rounded bg-[#00B4D8]/10 border border-[#00B4D8]/20 text-[#00B4D8] hover:bg-[#00B4D8]/20 cursor-pointer"
                                                         title="Edit user details"
                                                     >
                                                         <span className="material-symbols-rounded text-sm">edit</span>
@@ -571,11 +571,11 @@ export default function Users() {
 
             {/* Create User Modal */}
             {isCreateOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
-                    <div className="w-full max-w-md rounded-2xl overflow-hidden glass-elevated border border-white/[0.08] shadow-2xl p-6 relative my-8">
-                        <div className="flex justify-between items-center border-b border-white/5 pb-3">
-                            <h3 className="text-base font-bold text-white font-serif">Create User Account</h3>
-                            <button onClick={() => setIsCreateOpen(false)} className="text-slate-400 hover:text-white cursor-pointer"><span className="material-symbols-rounded">close</span></button>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--card-bg)]/60 backdrop-blur-sm overflow-y-auto">
+                    <div className="w-full max-w-md rounded-2xl overflow-hidden premium-card-elevated border border-[var(--card-border)] shadow-2xl p-6 relative my-8">
+                        <div className="flex justify-between items-center border-b border-[var(--card-border)] pb-3">
+                            <h3 className="text-base font-bold text-[var(--text-primary)] font-serif">Create User Account</h3>
+                            <button onClick={() => setIsCreateOpen(false)} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"><span className="material-symbols-rounded">close</span></button>
                         </div>
                         {formError && (
                             <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold font-mono">
@@ -585,75 +585,75 @@ export default function Users() {
                         <form onSubmit={handleCreateSubmit} className="mt-4 flex flex-col gap-3">
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] uppercase font-bold text-slate-400">Username *</label>
+                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Username *</label>
                                     <input
                                         type="text"
                                         placeholder="Username"
                                         value={username}
                                         onChange={e => setUsername(e.target.value)}
-                                        className="w-full px-3.5 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400 font-mono"
+                                        className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-mono"
                                     />
                                 </div>
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] uppercase font-bold text-slate-400">Password *</label>
+                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Password *</label>
                                     <input
                                         type="password"
                                         placeholder="Password"
                                         value={password}
                                         onChange={e => setPassword(e.target.value)}
-                                        className="w-full px-3.5 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400"
+                                        className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
                                     />
                                 </div>
                             </div>
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-[11px] uppercase font-bold text-slate-400">Full Name</label>
+                                <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Full Name</label>
                                 <input
                                     type="text"
                                     placeholder="Enter full name"
                                     value={fullName}
                                     onChange={e => setFullName(e.target.value)}
-                                    className="w-full px-3.5 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400"
+                                    className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] uppercase font-bold text-slate-400">Contact Phone</label>
+                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Contact Phone</label>
                                     <input
                                         type="text"
                                         placeholder="Phone number"
                                         value={phone}
                                         onChange={e => setPhone(e.target.value)}
-                                        className="w-full px-3.5 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400 font-mono"
+                                        className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-mono"
                                     />
                                 </div>
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] uppercase font-bold text-slate-400">Contact Email</label>
+                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Contact Email</label>
                                     <input
                                         type="email"
                                         placeholder="user@smaartpharmacy.in"
                                         value={email}
                                         onChange={e => setEmail(e.target.value)}
-                                        className="w-full px-3.5 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400 font-mono"
+                                        className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-mono"
                                     />
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] uppercase font-bold text-slate-400">Council Reg ID</label>
+                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Council Reg ID</label>
                                     <input
                                         type="text"
                                         placeholder="State Council ID"
                                         value={registrationNumber}
                                         onChange={e => setRegistrationNumber(e.target.value)}
-                                        className="w-full px-3.5 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400 font-mono"
+                                        className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-mono"
                                     />
                                 </div>
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] uppercase font-bold text-slate-400">Qualification</label>
+                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Qualification</label>
                                     <select
                                         value={qualification}
                                         onChange={e => setQualification(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[#0f1420] border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400"
+                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
                                     >
                                         <option value="">-- Select Qualification --</option>
                                         <option value="D.Pharm">D.Pharm</option>
@@ -666,11 +666,11 @@ export default function Users() {
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] uppercase font-bold text-slate-400">User Role *</label>
+                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">User Role *</label>
                                     <select
                                         value={role}
                                         onChange={e => setRole(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[#0f1420] border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400"
+                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
                                     >
                                         <option value="Pharmacist">Pharmacist</option>
                                         <option value="Manager">Manager</option>
@@ -678,11 +678,11 @@ export default function Users() {
                                     </select>
                                 </div>
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] uppercase font-bold text-slate-400">Shift Assignment</label>
+                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Shift Assignment</label>
                                     <select
                                         value={shiftType}
                                         onChange={e => setShiftType(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[#0f1420] border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400"
+                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
                                     >
                                         <option value="Day">Day Shift</option>
                                         <option value="Night">Night Shift</option>
@@ -692,11 +692,11 @@ export default function Users() {
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] uppercase font-bold text-slate-400">Assign Branch *</label>
+                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Assign Branch *</label>
                                     <select
                                         value={pharmacyId}
                                         onChange={e => setPharmacyId(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[#0f1420] border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400 font-serif font-bold"
+                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-serif font-bold"
                                     >
                                         <option value="">-- Branch --</option>
                                         {pharmacies.map(p => (
@@ -705,11 +705,11 @@ export default function Users() {
                                     </select>
                                 </div>
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] uppercase font-bold text-slate-400">Status</label>
+                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Status</label>
                                     <select
                                         value={status}
                                         onChange={e => setStatus(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[#0f1420] border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400"
+                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
                                     >
                                         <option value="Active">Active</option>
                                         <option value="Inactive">Inactive</option>
@@ -720,7 +720,7 @@ export default function Users() {
                                 type="submit"
                                 disabled={submitting}
                                 className="mt-2 w-full py-2.5 rounded-xl text-xs font-bold text-slate-950 transition-all duration-200 cursor-pointer disabled:opacity-50"
-                                style={{ background: 'linear-gradient(135deg, #00c2cc 0%, #0099a8 100%)' }}
+                                style={{ background: 'linear-gradient(135deg, #00B4D8 0%, #0099a8 100%)' }}
                             >
                                 {submitting ? 'Provisioning user…' : 'Create User'}
                             </button>
@@ -731,11 +731,11 @@ export default function Users() {
 
             {/* Edit User Modal */}
             {isEditOpen && selectedUser && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
-                    <div className="w-full max-w-md rounded-2xl overflow-hidden glass-elevated border border-white/[0.08] shadow-2xl p-6 relative my-8">
-                        <div className="flex justify-between items-center border-b border-white/5 pb-3">
-                            <h3 className="text-base font-bold text-white font-serif">Edit User Account</h3>
-                            <button onClick={() => setIsEditOpen(false)} className="text-slate-400 hover:text-white cursor-pointer"><span className="material-symbols-rounded">close</span></button>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--card-bg)]/60 backdrop-blur-sm overflow-y-auto">
+                    <div className="w-full max-w-md rounded-2xl overflow-hidden premium-card-elevated border border-[var(--card-border)] shadow-2xl p-6 relative my-8">
+                        <div className="flex justify-between items-center border-b border-[var(--card-border)] pb-3">
+                            <h3 className="text-base font-bold text-[var(--text-primary)] font-serif">Edit User Account</h3>
+                            <button onClick={() => setIsEditOpen(false)} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"><span className="material-symbols-rounded">close</span></button>
                         </div>
                         {formError && (
                             <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold font-mono">
@@ -744,59 +744,59 @@ export default function Users() {
                         )}
                         <form onSubmit={handleEditSubmit} className="mt-4 flex flex-col gap-3">
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-[11px] uppercase font-bold text-slate-400">Username *</label>
+                                <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Username *</label>
                                 <input
                                     type="text"
                                     value={username}
                                     onChange={e => setUsername(e.target.value)}
-                                    className="w-full px-3.5 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400 font-mono"
+                                    className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-mono"
                                 />
                             </div>
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-[11px] uppercase font-bold text-slate-400">Full Name</label>
+                                <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Full Name</label>
                                 <input
                                     type="text"
                                     value={fullName}
                                     onChange={e => setFullName(e.target.value)}
-                                    className="w-full px-3.5 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400"
+                                    className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] uppercase font-bold text-slate-400">Phone Contact</label>
+                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Phone Contact</label>
                                     <input
                                         type="text"
                                         value={phone}
                                         onChange={e => setPhone(e.target.value)}
-                                        className="w-full px-3.5 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400 font-mono"
+                                        className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-mono"
                                     />
                                 </div>
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] uppercase font-bold text-slate-400">Contact Email</label>
+                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Contact Email</label>
                                     <input
                                         type="email"
                                         value={email}
                                         onChange={e => setEmail(e.target.value)}
-                                        className="w-full px-3.5 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400 font-mono"
+                                        className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-mono"
                                     />
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] uppercase font-bold text-slate-400">Council Reg ID</label>
+                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Council Reg ID</label>
                                     <input
                                         type="text"
                                         value={registrationNumber}
                                         onChange={e => setRegistrationNumber(e.target.value)}
-                                        className="w-full px-3.5 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400 font-mono"
+                                        className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-mono"
                                     />
                                 </div>
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] uppercase font-bold text-slate-400">Qualification</label>
+                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Qualification</label>
                                     <select
                                         value={qualification}
                                         onChange={e => setQualification(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[#0f1420] border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400"
+                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
                                     >
                                         <option value="">-- Qualification --</option>
                                         <option value="D.Pharm">D.Pharm</option>
@@ -809,11 +809,11 @@ export default function Users() {
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] uppercase font-bold text-slate-400">User Role *</label>
+                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">User Role *</label>
                                     <select
                                         value={role}
                                         onChange={e => setRole(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[#0f1420] border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400"
+                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
                                     >
                                         <option value="Pharmacist">Pharmacist</option>
                                         <option value="Manager">Manager</option>
@@ -821,11 +821,11 @@ export default function Users() {
                                     </select>
                                 </div>
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] uppercase font-bold text-slate-400">Shift Assignment</label>
+                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Shift Assignment</label>
                                     <select
                                         value={shiftType}
                                         onChange={e => setShiftType(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[#0f1420] border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400"
+                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
                                     >
                                         <option value="Day">Day Shift</option>
                                         <option value="Night">Night Shift</option>
@@ -835,11 +835,11 @@ export default function Users() {
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] uppercase font-bold text-slate-400">Assign Branch *</label>
+                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Assign Branch *</label>
                                     <select
                                         value={pharmacyId}
                                         onChange={e => setPharmacyId(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[#0f1420] border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400 font-serif font-bold"
+                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-serif font-bold"
                                     >
                                         <option value="">-- Branch --</option>
                                         {pharmacies.map(p => (
@@ -848,11 +848,11 @@ export default function Users() {
                                     </select>
                                 </div>
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] uppercase font-bold text-slate-400">Status</label>
+                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Status</label>
                                     <select
                                         value={status}
                                         onChange={e => setStatus(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[#0f1420] border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400"
+                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
                                     >
                                         <option value="Active">Active</option>
                                         <option value="Inactive">Inactive</option>
@@ -863,7 +863,7 @@ export default function Users() {
                                 type="submit"
                                 disabled={submitting}
                                 className="mt-2 w-full py-2.5 rounded-xl text-xs font-bold text-slate-950 transition-all duration-200 cursor-pointer disabled:opacity-50"
-                                style={{ background: 'linear-gradient(135deg, #00c2cc 0%, #0099a8 100%)' }}
+                                style={{ background: 'linear-gradient(135deg, #00B4D8 0%, #0099a8 100%)' }}
                             >
                                 {submitting ? 'Saving changes…' : 'Save Changes'}
                             </button>
@@ -874,11 +874,11 @@ export default function Users() {
 
             {/* Reset Password Modal */}
             {isResetOpen && selectedUser && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="w-full max-w-md rounded-2xl overflow-hidden glass-elevated border border-white/[0.08] shadow-2xl p-6 relative">
-                        <div className="flex justify-between items-center border-b border-white/5 pb-3">
-                            <h3 className="text-base font-bold text-white font-serif">Reset User Password</h3>
-                            <button onClick={() => setIsResetOpen(false)} className="text-slate-400 hover:text-white cursor-pointer"><span className="material-symbols-rounded">close</span></button>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--card-bg)]/60 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-2xl overflow-hidden premium-card-elevated border border-[var(--card-border)] shadow-2xl p-6 relative">
+                        <div className="flex justify-between items-center border-b border-[var(--card-border)] pb-3">
+                            <h3 className="text-base font-bold text-[var(--text-primary)] font-serif">Reset User Password</h3>
+                            <button onClick={() => setIsResetOpen(false)} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"><span className="material-symbols-rounded">close</span></button>
                         </div>
                         {formError && (
                             <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold font-mono">
@@ -887,20 +887,20 @@ export default function Users() {
                         )}
                         <form onSubmit={handleResetSubmit} className="mt-4 flex flex-col gap-4">
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-[11px] uppercase font-bold text-slate-400">Reset password for: @{selectedUser.username}</label>
+                                <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Reset password for: @{selectedUser.username}</label>
                                 <input
                                     type="password"
                                     placeholder="Enter new secure password"
                                     value={newPassword}
                                     onChange={e => setNewPassword(e.target.value)}
-                                    className="w-full px-3.5 py-2 bg-white/5 border border-white/10 rounded-xl text-xs text-white outline-none focus:border-cyan-400"
+                                    className="w-full px-3.5 py-2 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
                                 />
                             </div>
                             <button
                                 type="submit"
                                 disabled={submitting}
                                 className="mt-2 w-full py-2.5 rounded-xl text-xs font-bold text-slate-950 transition-all duration-200 cursor-pointer disabled:opacity-50"
-                                style={{ background: 'linear-gradient(135deg, #00c2cc 0%, #0099a8 100%)' }}
+                                style={{ background: 'linear-gradient(135deg, #00B4D8 0%, #0099a8 100%)' }}
                             >
                                 {submitting ? 'Resetting password…' : 'Reset Password'}
                             </button>

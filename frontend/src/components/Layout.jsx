@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import PageTransition from './transitions/PageTransition';
 
 const NAV_ITEMS = [
     {
@@ -31,14 +32,14 @@ const NAV_ITEMS = [
     {
         to: '/inventory/history',
         icon: 'swap_vert',
-        label: 'Stock Movements',
+        label: 'Action Log',
         sublabel: 'Audit trail',
     },
     {
         to: '/inventory/transaction-new',
         icon: 'edit_note',
-        label: 'New Transaction',
-        sublabel: 'Record movement',
+        label: 'Record Action',
+        sublabel: 'Log stock action',
     },
 ];
 
@@ -47,8 +48,8 @@ const PAGE_LABELS = {
     '/expiry-dashboard': { title: 'Expiry Intelligence', sub: 'Risk analysis and stock actions' },
     '/medicines': { title: 'Medicine Ledger', sub: 'Manage your pharmacy catalog' },
     '/medicines/add': { title: 'Add Medicine', sub: 'Create a new catalog entry' },
-    '/inventory/history': { title: 'Stock Movements', sub: 'Complete audit trail' },
-    '/inventory/transaction-new': { title: 'New Transaction', sub: 'Record a stock movement' },
+    '/inventory/history': { title: 'Action Log', sub: 'Complete audit trail' },
+    '/inventory/transaction-new': { title: 'Record Action', sub: 'Record a stock action' },
     '/pharmacies': { title: 'Pharmacy Management', sub: 'Manage organization branches' },
     '/users': { title: 'User Account Management', sub: 'Manage system users and access roles' },
     '/emergency-support': { title: 'Emergency Support Center', sub: 'Coordinate emergency stock transfers across branches' },
@@ -57,7 +58,7 @@ const PAGE_LABELS = {
 function getPageMeta(pathname) {
     if (pathname.startsWith('/medicines/edit/')) return { title: 'Edit Medicine', sub: 'Update catalog record' };
     if (pathname.startsWith('/medicines/') && pathname !== '/medicines/add') return { title: 'Medicine Details', sub: 'Full record view' };
-    if (pathname.startsWith('/inventory/transaction/')) return { title: 'Transaction Receipt', sub: 'Movement audit log' };
+    if (pathname.startsWith('/inventory/transaction/')) return { title: 'Transaction Receipt', sub: 'Action audit log' };
     if (pathname.startsWith('/pharmacies/')) return { title: 'Branch Details', sub: 'Branch performance and statistics' };
     if (pathname.startsWith('/users/') && pathname !== '/users') return { title: 'User Profile Details', sub: 'View user profile and audit logs' };
     return PAGE_LABELS[pathname] || { title: 'SMAART Pharmacy', sub: 'Intelligence Platform' };
@@ -70,6 +71,95 @@ export default function Layout() {
     const [collapsed, setCollapsed] = useState(false);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const pageMeta = getPageMeta(pathname);
+    
+    // Theme state
+    const [isDarkMode, setIsDarkMode] = useState(() => {
+        const storedTheme = localStorage.getItem('theme');
+        return storedTheme === 'dark';
+    });
+
+    useEffect(() => {
+        if (isDarkMode) {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+        }
+    }, [isDarkMode]);
+
+    // ── Scroll Reveal & Progress State ──
+    const mainRef = React.useRef(null);
+    const progressBarRef = React.useRef(null);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            if (!mainRef.current || !progressBarRef.current) return;
+            const container = mainRef.current;
+            const totalHeight = container.scrollHeight - container.clientHeight;
+            if (totalHeight <= 0) {
+                progressBarRef.current.style.width = '0%';
+                return;
+            }
+            const percentage = (container.scrollTop / totalHeight) * 100;
+            progressBarRef.current.style.width = `${percentage}%`;
+        };
+
+        const container = mainRef.current;
+        if (container) {
+            container.addEventListener('scroll', handleScroll, { passive: true });
+        }
+        return () => {
+            if (container) {
+                container.removeEventListener('scroll', handleScroll);
+            }
+        };
+    }, [pathname]);
+
+    useEffect(() => {
+        if (mainRef.current) {
+            mainRef.current.scrollTop = 0;
+        }
+
+        if (!window.IntersectionObserver) return;
+
+        const timer = setTimeout(() => {
+            if (!mainRef.current) return;
+
+            const elements = mainRef.current.querySelectorAll(
+                '.premium-card, .premium-card-elevated, section, table, form, .grid > div, .flex-wrap > div, h2, h3'
+            );
+
+            const observer = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('is-visible');
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                },
+                {
+                    root: mainRef.current,
+                    rootMargin: '0px 0px -10% 0px',
+                    threshold: 0.05
+                }
+            );
+
+            elements.forEach(el => {
+                if (!el.classList.contains('is-visible')) {
+                    el.classList.add('scroll-reveal');
+                    observer.observe(el);
+                }
+            });
+
+            return () => {
+                observer.disconnect();
+            };
+        }, 150);
+
+        return () => clearTimeout(timer);
+    }, [pathname]);
 
     // ── Guide Modal State ──
     const [isGuideOpen, setIsGuideOpen] = useState(true);
@@ -102,13 +192,26 @@ export default function Layout() {
         return () => window.removeEventListener('open-system-guide', handleOpenGuide);
     }, []);
 
+    // Auto-collapse sidebar on screens under 1024px
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth < 1024) {
+                setCollapsed(true);
+            }
+        };
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     // ── Branches & Alerts Polling State ──
     const [branches, setBranches] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
 
     const fetchAlertCount = async () => {
         try {
-            const res = await fetch('/api/alerts');
+            const url = activeBranch?.id ? `/api/alerts?branchId=${activeBranch.id}` : '/api/alerts';
+            const res = await fetch(url);
             if (res.ok) {
                 const alerts = await res.json();
                 setUnreadCount(alerts.length);
@@ -183,7 +286,7 @@ export default function Layout() {
             {
                 to: '/inventory/history',
                 icon: 'swap_vert',
-                label: 'Stock Movements',
+                label: 'Action Log',
                 sublabel: 'Audit trail',
             },
             {
@@ -201,8 +304,8 @@ export default function Layout() {
             {
                 to: '/purchase-orders',
                 icon: 'receipt_long',
-                label: 'Purchase Orders',
-                sublabel: 'Procurement POs',
+                label: 'Supplier Orders',
+                sublabel: 'Procurement pipeline',
             },
             {
                 to: '/revenue',
@@ -241,7 +344,7 @@ export default function Layout() {
             {
                 to: '/inventory/history',
                 icon: 'swap_vert',
-                label: 'Stock Movements',
+                label: 'Action Log',
                 sublabel: 'Audit trail',
             },
             {
@@ -259,8 +362,8 @@ export default function Layout() {
             {
                 to: '/purchase-orders',
                 icon: 'receipt_long',
-                label: 'Purchase Orders',
-                sublabel: 'Procurement POs',
+                label: 'Supplier Orders',
+                sublabel: 'Procurement pipeline',
             },
             {
                 to: '/revenue',
@@ -293,8 +396,8 @@ export default function Layout() {
             {
                 to: '/inventory/transaction-new',
                 icon: 'edit_note',
-                label: 'New Transaction',
-                sublabel: 'Record movement',
+                label: 'Record Action',
+                sublabel: 'Log stock action',
             },
             {
                 to: '/emergency-support',
@@ -314,11 +417,11 @@ export default function Layout() {
 
     const quickActions = [
         { id: 'add-med', title: 'Add Medicine', subtitle: 'Create a new catalog entry', icon: 'add_circle', path: '/medicines/add' },
-        { id: 'new-tx', title: 'New Transaction', subtitle: 'Record stock movement', icon: 'edit_note', path: '/inventory/transaction-new' },
+        { id: 'new-tx', title: 'Record Action', subtitle: 'Record stock action', icon: 'edit_note', path: '/inventory/transaction-new' },
         { id: 'exp-intel', title: 'Expiry Intelligence', subtitle: 'Risk & dead stock analysis', icon: 'hourglass_empty', path: '/expiry-dashboard' },
         { id: 'dashboard', title: 'Analytics Dashboard', subtitle: 'Operational metrics dashboard', icon: 'dashboard', path: '/dashboard' },
         { id: 'ledger', title: 'Medicine Ledger', subtitle: 'Manage stock catalog', icon: 'layers', path: '/medicines' },
-        { id: 'history', title: 'Stock Movements Audit', subtitle: 'Audit log trail', icon: 'swap_vert', path: '/inventory/history' },
+        { id: 'history', title: 'Action Log Audit', subtitle: 'Audit log trail', icon: 'swap_vert', path: '/inventory/history' },
     ];
 
     const filteredActions = quickActions.filter(a =>
@@ -428,44 +531,45 @@ export default function Layout() {
     };
 
     return (
-        <div className="flex w-screen h-screen overflow-hidden" style={{ background: 'var(--canvas)' }}>
+        <div className="flex w-screen h-screen overflow-hidden" style={{ background: 'var(--bg-primary)' }}>
             {/* ── Sidebar ── */}
             <aside
                 className={`flex-shrink-0 flex flex-col h-full transition-all duration-300 ease-in-out relative z-20 ${
-                    collapsed ? 'w-[60px]' : 'w-[160px]'
+                    collapsed ? 'w-[68px]' : 'w-[220px]'
                 }`}
                 style={{
-                    background: 'rgba(8, 10, 16, 0.4)',
+                    background: 'var(--bg-sidebar)',
+                    borderRight: '1px solid var(--card-border)'
                 }}
             >
                 {/* Sidebar brand glow accent */}
                 <div
                     className="absolute top-0 left-0 right-0 h-48 pointer-events-none"
-                    style={{ background: 'radial-gradient(ellipse at 50% -20%, rgba(0,194,204,0.08) 0%, transparent 70%)' }}
+                    style={{ background: 'radial-gradient(ellipse at 50% -20%, rgba(6,182,212,0.05) 0%, transparent 70%)' }}
                 />
 
                 {/* Logo */}
-                <div className={`flex items-center gap-2.5 px-4 py-2.5 relative ${collapsed ? 'justify-center' : ''}`}>
+                <div className={`flex items-center gap-3 px-5 py-4 relative ${collapsed ? 'justify-center px-0' : ''}`}>
                     <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ background: 'linear-gradient(135deg, #00c2cc 0%, #0077a8 100%)', boxShadow: '0 0 16px rgba(0,194,204,0.2)' }}
+                        className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 shadow-soft"
+                        style={{ background: 'linear-gradient(135deg, #00B4D8 0%, #0891b2 100%)' }}
                     >
-                        <span className="material-symbols-rounded text-[#0a0d14] text-base font-bold" style={{ fontVariationSettings: "'FILL' 1" }}>
+                        <span className="material-symbols-rounded text-[var(--text-primary)] text-lg font-medium" style={{ fontVariationSettings: "'FILL' 1" }}>
                             medication
                         </span>
                     </div>
                     {!collapsed && (
                         <div className="flex flex-col overflow-hidden">
-                            <span className="text-base font-black tracking-tight leading-none text-white font-serif" style={{ fontFamily: "'Lora', serif" }}>SMAART</span>
-                            <span className="text-[11px] font-bold tracking-wider mt-0.5" style={{ color: 'var(--brand)', textShadow: '0 0 10px rgba(0,194,204,0.2)' }}>PHARMACY</span>
+                            <span className="text-[15px] font-semibold tracking-tight leading-none font-sans" style={{ color: 'var(--text-primary)' }}>SMAART</span>
+                            <span className="text-xs font-medium tracking-wide mt-1 text-[var(--brand)] uppercase">Pharmacy</span>
                         </div>
                     )}
                 </div>
 
                 {/* Nav Items */}
-                <nav className="flex-1 flex flex-col gap-0.5 px-2 overflow-y-auto scrollable">
+                <nav className="flex-1 flex flex-col gap-1.5 px-3 overflow-y-auto scrollable mt-2">
                     {!collapsed && (
-                        <span className="text-[11px] font-bold uppercase tracking-wide px-2.5 pb-1.5" style={{ color: 'var(--text-muted)' }}>
+                        <span className="text-xs font-semibold uppercase tracking-wider px-2 pb-2" style={{ color: 'var(--text-muted)' }}>
                             Navigation
                         </span>
                     )}
@@ -477,49 +581,46 @@ export default function Layout() {
                             end={item.end}
                             title={collapsed ? item.label : undefined}
                             className={({ isActive }) =>
-                                `group flex items-center gap-2.5 rounded-lg transition-all duration-200 relative ${
-                                    collapsed ? 'justify-center px-0 py-2.5' : 'px-2.5 py-1.5'
+                                `group flex items-center gap-3 rounded-full transition-all duration-200 relative ${
+                                    collapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-2'
                                 } ${
                                     isActive
-                                        ? 'text-[#00e1f0]'
-                                        : 'hover:text-[var(--text-primary)]'
+                                        ? 'nav-item-active'
+                                        : 'hover:text-[var(--text-primary)] hover:bg-[var(--card-bg)]/[0.02]'
                                 }`
                             }
                             style={({ isActive }) => ({
-                                background: isActive ? 'rgba(0, 194, 204, 0.08)' : 'transparent',
-                                color: isActive ? '#00e1f0' : 'var(--text-secondary)',
+                                color: !isActive ? 'var(--text-secondary)' : undefined,
                             })}
                         >
                             {({ isActive }) => (
                                 <>
                                     {isActive && (
                                         <div
-                                            className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
-                                            style={{ background: '#00c2cc', boxShadow: '0 0 8px rgba(0,194,204,0.8)' }}
+                                            className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full hidden dark:block"
+                                            style={{ background: 'var(--brand)', boxShadow: 'var(--tw-shadow-glow-sm)' }}
                                         />
                                     )}
                                     <div className="relative flex-shrink-0">
                                         <span
-                                            className="material-symbols-rounded flex-shrink-0 transition-all"
+                                            className="material-symbols-rounded flex-shrink-0 transition-all text-lg"
                                             style={{
-                                                fontSize: '18px',
                                                 fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0",
                                             }}
                                         >
                                             {item.icon}
                                         </span>
                                         {collapsed && item.to === '/dashboard' && unreadCount > 0 && (
-                                            <div className="absolute -top-1.5 -right-1.5 w-2 h-2 rounded-full bg-red-500 border border-[#0a0d14] animate-pulse" />
+                                            <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] animate-pulse" />
                                         )}
                                     </div>
                                     {!collapsed && (
                                         <div className="flex-1 flex items-center justify-between min-w-0 pr-1">
                                             <div className="flex flex-col min-w-0">
-                                                <span className="text-xs font-semibold truncate leading-tight">{item.label}</span>
-                                                <span className="text-[11px] truncate leading-tight opacity-60">{item.sublabel}</span>
+                                                <span className="text-[13px] font-medium truncate leading-tight">{item.label}</span>
                                             </div>
                                             {item.to === '/dashboard' && unreadCount > 0 && (
-                                                <span className="flex-shrink-0 ml-1.5 w-4 h-4 rounded-full bg-red-500 text-[11px] font-black text-white flex items-center justify-center animate-pulse">
+                                                <span className="flex-shrink-0 ml-2 w-5 h-5 rounded-full bg-amber-500/20 text-amber-500 border border-amber-500/30 text-xs font-bold flex items-center justify-center">
                                                     {unreadCount}
                                                 </span>
                                             )}
@@ -537,21 +638,21 @@ export default function Layout() {
                     {!collapsed ? (
                         <button
                             onClick={() => navigate(`/users/${user?.id}`)}
-                            className="w-full text-left rounded-xl p-3 mb-3 group hover:border-[#00c2cc]/40 hover:bg-[#00c2cc]/5 transition-all duration-300 border border-white/5 cursor-pointer relative block"
+                            className="w-full text-left rounded-xl p-3 mb-3 group hover:border-[#00B4D8]/40 hover:bg-[#00B4D8]/5 transition-all duration-300 border border-white/5 cursor-pointer relative block"
                             style={{ background: 'rgba(255,255,255,0.03)' }}
                         >
                             <div className="flex items-center gap-2.5">
                                 <div
                                     className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold transition-all group-hover:scale-105"
-                                    style={{ background: 'linear-gradient(135deg, #00c2cc20, #007db830)', color: '#00c2cc', border: '1px solid rgba(0,194,204,0.2)' }}
+                                    style={{ background: 'linear-gradient(135deg, #00B4D820, #007db830)', color: '#00B4D8', border: '1px solid rgba(0,194,204,0.2)' }}
                                 >
                                     {user?.username?.charAt(0).toUpperCase()}
                                 </div>
                                 <div className="flex flex-col min-w-0 flex-1">
                                     <span className="text-xs font-semibold truncate text-[var(--text-primary)] group-hover:text-[#00e1f0] transition-colors">{user?.username}</span>
-                                    <span className="text-[11px] truncate capitalize text-[var(--text-muted)] group-hover:text-white/80 transition-colors">{user?.role} Settings</span>
+                                    <span className="text-xs truncate capitalize text-[var(--text-muted)] group-hover:text-[var(--text-primary)]/80 transition-colors">{user?.role} Settings</span>
                                 </div>
-                                <span className="material-symbols-rounded text-xs text-white/30 group-hover:text-[#00e1f0] transition-colors">
+                                <span className="material-symbols-rounded text-xs text-[var(--text-primary)]/30 group-hover:text-[#00e1f0] transition-colors">
                                     settings
                                 </span>
                             </div>
@@ -559,7 +660,7 @@ export default function Layout() {
                     ) : (
                         <button
                             onClick={() => navigate(`/users/${user?.id}`)}
-                            className="w-8 h-8 mx-auto rounded-lg flex items-center justify-center mb-3 group hover:border-[#00c2cc]/40 hover:bg-[#00c2cc]/5 transition-all duration-300 border border-white/5 cursor-pointer flex-shrink-0"
+                            className="w-8 h-8 mx-auto rounded-lg flex items-center justify-center mb-3 group hover:border-[#00B4D8]/40 hover:bg-[#00B4D8]/5 transition-all duration-300 border border-white/5 cursor-pointer flex-shrink-0"
                             style={{ background: 'rgba(255,255,255,0.03)' }}
                             title="Profile & Settings"
                         >
@@ -572,6 +673,7 @@ export default function Layout() {
                     <div className="flex flex-col gap-1.5">
                         <button
                             onClick={() => setCollapsed(!collapsed)}
+                            title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
                             className="w-full flex items-center justify-center gap-2 py-2 rounded-xl transition-all duration-200 text-xs font-medium cursor-pointer"
                             style={{ color: 'var(--text-muted)', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}
                             onMouseEnter={e => e.currentTarget.style.color = 'var(--text-secondary)'}
@@ -585,6 +687,7 @@ export default function Layout() {
 
                         <button
                             onClick={handleLogout}
+                            title={collapsed ? "Sign Out" : undefined}
                             className="w-full flex items-center justify-center gap-2 py-2 rounded-xl transition-all duration-200 text-xs font-medium cursor-pointer"
                             style={{ color: 'var(--text-muted)', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}
                             onMouseEnter={e => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.background = 'rgba(248, 113, 113, 0.06)'; e.currentTarget.style.borderColor = 'rgba(248, 113, 113, 0.15)'; }}
@@ -598,36 +701,75 @@ export default function Layout() {
             </aside>
 
             {/* ── Main Area ── */}
-            <div className="flex-1 flex flex-col h-full overflow-hidden relative" style={{ background: 'var(--canvas)' }}>
+            <div className="flex-1 flex flex-col h-full overflow-hidden relative" style={{ background: 'var(--bg-primary)' }}>
+                {/* Ambient right side glow */}
+                <div 
+                    className="absolute top-0 right-0 w-[500px] h-[500px] pointer-events-none mix-blend-screen opacity-50 z-0"
+                    style={{
+                        background: 'radial-gradient(circle at top right, rgba(0,194,204,0.12) 0%, transparent 60%)',
+                        filter: 'blur(50px)',
+                    }}
+                />
 
                 {/* ── Top Header Bar ── */}
                 <header
-                    className="flex-shrink-0 flex items-center justify-between px-6 h-12 relative z-30 border-b border-white/[0.05]"
+                    className="flex-shrink-0 flex items-center justify-between px-6 h-14 relative z-30"
                     style={{ 
-                        background: 'rgba(10, 15, 29, 0.45)', 
-                        backdropFilter: 'blur(12px)', 
-                        WebkitBackdropFilter: 'blur(12px)' 
+                        background: 'var(--bg-header)', 
+                        backdropFilter: 'blur(20px)', 
+                        WebkitBackdropFilter: 'blur(20px)',
+                        borderBottom: '1px solid var(--card-border)'
                     }}
                 >
-                    <div className="flex flex-col justify-center">
-                        <h1 className="text-sm font-bold tracking-tight text-white leading-tight" style={{ fontFamily: "'Lora', serif" }}>{pageMeta.title}</h1>
-                        <p className="text-[11px] leading-none mt-0.5" style={{ color: 'var(--text-muted)' }}>{pageMeta.sub}</p>
+                    <div className="flex items-center gap-6">
+                        <div className="flex flex-col justify-center">
+                            <h1 className="text-[16px] font-semibold tracking-tight leading-tight font-sans" style={{ color: 'var(--text-primary)' }}>{pageMeta.title}</h1>
+                            <p className="text-xs font-medium leading-none mt-1" style={{ color: 'var(--text-muted)' }}>{pageMeta.sub}</p>
+                        </div>
+
+                        {/* Search Bar (Triggers Spotlight) */}
+                        <button
+                            onClick={() => setIsSpotlightOpen(true)}
+                            className="hidden md:flex items-center gap-3 px-4 h-9 rounded-full transition-all duration-300 border shadow-sm group hover:shadow-md"
+                            style={{ background: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
+                        >
+                            <span className="material-symbols-rounded text-[18px]" style={{ color: 'var(--text-muted)' }}>search</span>
+                            <span className="text-sm font-medium mr-12" style={{ color: 'var(--text-muted)' }}>Search for anything...</span>
+                            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: 'var(--bg-primary)', color: 'var(--text-muted)' }}>
+                                <span className="text-[10px]">⌘</span>K
+                            </div>
+                        </button>
                     </div>
 
                     <div className="flex items-center gap-2.5">
                         {/* Live status pill */}
                         <div
-                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all duration-300"
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all duration-300"
                             style={{ 
-                                background: 'rgba(0,194,204,0.08)', 
-                                border: '1px solid rgba(0,194,204,0.22)', 
-                                color: '#00c2cc',
-                                boxShadow: '0 0 10px rgba(0,194,204,0.05)'
+                                background: 'var(--brand-dim)', 
+                                border: '1px solid var(--card-border)', 
+                                color: 'var(--brand)',
                             }}
                         >
-                            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#00c2cc', boxShadow: '0 0 8px rgba(0,194,204,0.8)' }} />
+                            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'var(--brand)', boxShadow: '0 0 8px var(--brand)' }} />
                             <span>Live</span>
                         </div>
+
+                        {/* Theme Toggle Button */}
+                        <button
+                            onClick={() => setIsDarkMode(!isDarkMode)}
+                            className="flex items-center justify-center w-7 h-7 rounded-full border transition-all cursor-pointer shadow-sm hover:shadow-md"
+                            style={{ 
+                                background: 'var(--card-bg)', 
+                                borderColor: 'var(--card-border)',
+                                color: 'var(--text-secondary)'
+                            }}
+                            title="Toggle Theme"
+                        >
+                            <span className="material-symbols-rounded text-sm">
+                                {isDarkMode ? 'light_mode' : 'dark_mode'}
+                            </span>
+                        </button>
 
                         {/* System Guide Help Button */}
                         <button
@@ -635,7 +777,12 @@ export default function Layout() {
                                 setIsGuideOpen(true);
                                 setGuideTab('workflow');
                             }}
-                            className="flex items-center justify-center w-7 h-7 rounded-full bg-white/[0.03] border border-white/[0.07] text-white/80 hover:text-white hover:bg-white/[0.07] hover:border-white/[0.15] transition-all cursor-pointer"
+                            className="flex items-center justify-center w-7 h-7 rounded-full border transition-all cursor-pointer shadow-sm hover:shadow-md"
+                            style={{ 
+                                background: 'var(--card-bg)', 
+                                borderColor: 'var(--card-border)',
+                                color: 'var(--text-secondary)'
+                            }}
                             title="System Guide & Logic Reference"
                         >
                             <span className="material-symbols-rounded text-sm">help</span>
@@ -644,7 +791,12 @@ export default function Layout() {
                         {/* Profile Settings Button */}
                         <button
                             onClick={() => navigate(`/users/${user?.id}`)}
-                            className="flex items-center justify-center w-7 h-7 rounded-full bg-[#00c2cc]/10 border border-[#00c2cc]/20 text-[#00c2cc] hover:text-[#00e5ff] hover:bg-[#00c2cc]/20 hover:border-[#00c2cc]/40 transition-all cursor-pointer"
+                            className="flex items-center justify-center w-7 h-7 rounded-full border transition-all cursor-pointer shadow-sm hover:shadow-md"
+                            style={{ 
+                                background: 'var(--brand-dim)', 
+                                borderColor: 'var(--card-border)',
+                                color: 'var(--brand)'
+                            }}
                             title="Profile & Settings"
                         >
                             <span className="material-symbols-rounded text-sm">settings</span>
@@ -653,12 +805,11 @@ export default function Layout() {
                         {/* Pharmacy name pill or Branch Switcher for Admin */}
                         {user?.role === 'Admin' && branches.length > 0 ? (
                             <div
-                                className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold transition-all duration-300"
+                                className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold transition-all duration-300"
                                 style={{ 
-                                    background: 'rgba(15,20,32,0.85)', 
-                                    border: '1px solid rgba(0,194,204,0.25)', 
+                                    background: 'var(--card-bg)', 
+                                    border: '1px solid var(--card-border)', 
                                     color: 'var(--text-secondary)',
-                                    boxShadow: '0 0 10px rgba(0,194,204,0.05)'
                                 }}
                             >
                                 <span className="material-symbols-rounded text-xs" style={{ color: 'var(--brand)' }}>storefront</span>
@@ -670,10 +821,10 @@ export default function Layout() {
                                             switchBranch(selected.pharmacyId, selected.name);
                                         }
                                     }}
-                                    className="bg-transparent border-none outline-none text-white font-medium cursor-pointer py-0.5 pr-0.5 text-[11px]"
+                                    className="bg-transparent border-none outline-none text-[var(--text-primary)] font-medium cursor-pointer py-0.5 pr-0.5 text-xs"
                                 >
                                     {branches.map(b => (
-                                        <option key={b.pharmacyId} value={b.pharmacyId} className="bg-[#0f1420] text-white">
+                                        <option key={b.pharmacyId} value={b.pharmacyId} className="bg-[var(--card-bg)] text-[var(--text-primary)]">
                                             {b.name}
                                         </option>
                                     ))}
@@ -681,12 +832,11 @@ export default function Layout() {
                             </div>
                         ) : (
                             <div
-                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all duration-300"
+                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-300"
                                 style={{ 
-                                    background: 'rgba(255,255,255,0.03)', 
-                                    border: '1px solid rgba(255,255,255,0.07)', 
+                                    background: 'var(--card-bg)', 
+                                    border: '1px solid var(--card-border)', 
                                     color: 'var(--text-secondary)',
-                                    boxShadow: '0 0 10px rgba(255,255,255,0.02)'
                                 }}
                             >
                                 <span className="material-symbols-rounded text-xs" style={{ color: 'var(--brand)' }}>storefront</span>
@@ -696,9 +846,16 @@ export default function Layout() {
                     </div>
                 </header>
 
+                {/* ── Scroll Progress Bar ── */}
+                <div className="scroll-progress-container">
+                    <div className="scroll-progress-bar" ref={progressBarRef} />
+                </div>
+
                 {/* ── Page Content ── */}
-                <main className="flex-1 overflow-y-auto scrollable px-6 pt-2 pb-6 animate-fade-in relative z-10">
-                    <Outlet />
+                <main ref={mainRef} className="flex-1 overflow-y-auto scrollable px-6 pt-2 pb-6 animate-fade-in relative z-10">
+                    <PageTransition>
+                        <Outlet />
+                    </PageTransition>
                 </main>
             </div>
 
@@ -706,20 +863,20 @@ export default function Layout() {
             {isSpotlightOpen && (
                 <div 
                     className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] px-4"
-                    style={{ background: 'rgba(10, 15, 29, 0.7)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
+                    style={{ background: 'var(--bg-header)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
                     onClick={() => setIsSpotlightOpen(false)}
                 >
                     <div 
-                        className="w-full max-w-xl rounded-2xl overflow-hidden glass-elevated border border-white/[0.08] shadow-2xl animate-slide-up relative z-10"
+                        className="w-full max-w-xl rounded-2xl overflow-hidden premium-card-elevated border border-[var(--card-border)] shadow-2xl animate-slide-up relative z-10"
                         style={{ background: 'rgba(20, 25, 41, 0.9)' }}
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Search bar inside modal */}
-                        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-white/[0.06] relative">
-                            <span className="material-symbols-rounded text-[#00e5ff] text-xl">search</span>
+                        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[var(--card-border)] relative">
+                            <span className="material-symbols-rounded text-[var(--brand)] text-xl">search</span>
                             <input
                                 type="text"
-                                className="flex-1 bg-transparent border-0 outline-none text-sm text-white placeholder-white/40 font-medium"
+                                className="flex-1 bg-transparent border-0 outline-none text-sm text-[var(--text-primary)] placeholder-white/40 font-medium"
                                 placeholder="Search medicines, NDC, categories, or actions..."
                                 value={spotlightQuery}
                                 onChange={e => {
@@ -728,7 +885,7 @@ export default function Layout() {
                                 }}
                                 autoFocus
                             />
-                            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[11px] font-mono tracking-wider font-semibold text-white/50">
+                            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--card-bg)]/5 border border-white/10 text-xs font-mono tracking-wider font-semibold text-[var(--text-primary)]/50">
                                 ESC
                             </div>
                         </div>
@@ -736,12 +893,12 @@ export default function Layout() {
                         {/* List of items */}
                         <div className="max-h-[350px] overflow-y-auto scrollable py-2">
                             {isSpotlightLoading ? (
-                                <div className="flex flex-col items-center justify-center py-12 gap-2 text-white/40">
-                                    <span className="w-5 h-5 border-2 border-[#00e5ff] border-t-transparent rounded-full animate-spin" />
+                                <div className="flex flex-col items-center justify-center py-12 gap-2 text-[var(--text-primary)]/40">
+                                    <span className="w-5 h-5 border-2 border-[var(--brand)] border-t-transparent rounded-full animate-spin" />
                                     <span className="text-xs">Fetching catalog items...</span>
                                 </div>
                             ) : spotlightItems.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-12 text-white/40 gap-2">
+                                <div className="flex flex-col items-center justify-center py-12 text-[var(--text-primary)]/40 gap-2">
                                     <span className="material-symbols-rounded text-3xl">search_off</span>
                                     <span className="text-xs">No matching entries found</span>
                                 </div>
@@ -749,7 +906,7 @@ export default function Layout() {
                                 <div>
                                     {/* Quick Actions Header if there are actions */}
                                     {spotlightItems.some(i => i.id && quickActions.some(qa => qa.id === i.id)) && (
-                                        <div className="text-[11px] font-bold uppercase tracking-wider px-4 py-1 text-white/30">
+                                        <div className="text-xs font-bold uppercase tracking-wider px-4 py-1 text-[var(--text-primary)]/30">
                                             Quick Actions
                                         </div>
                                     )}
@@ -763,7 +920,7 @@ export default function Layout() {
                                         return (
                                             <React.Fragment key={item.id}>
                                                 {isFirstMed && (
-                                                    <div className="text-[11px] font-bold uppercase tracking-wider px-4 py-1 mt-2 text-white/30">
+                                                    <div className="text-xs font-bold uppercase tracking-wider px-4 py-1 mt-2 text-[var(--text-primary)]/30">
                                                         Medicines
                                                     </div>
                                                 )}
@@ -785,7 +942,7 @@ export default function Layout() {
                                                             style={{ 
                                                                 background: isSelected ? 'rgba(0, 229, 255, 0.15)' : 'rgba(255, 255, 255, 0.03)',
                                                                 border: isSelected ? '1px solid rgba(0, 229, 255, 0.25)' : '1px solid rgba(255, 255, 255, 0.05)',
-                                                                color: isSelected ? '#00e5ff' : 'var(--text-secondary)'
+                                                                color: isSelected ? 'var(--brand)' : 'var(--text-secondary)'
                                                             }}
                                                         >
                                                             <span className="material-symbols-rounded text-base font-bold">
@@ -795,17 +952,17 @@ export default function Layout() {
                                                         <div className="flex flex-col min-w-0">
                                                             <span 
                                                                 className="text-xs font-bold leading-none truncate"
-                                                                style={{ color: isSelected ? '#00e5ff' : 'var(--text-primary)' }}
+                                                                style={{ color: isSelected ? 'var(--brand)' : 'var(--text-primary)' }}
                                                             >
                                                                 {item.title}
                                                             </span>
-                                                            <span className="text-[11px] leading-tight truncate text-white/50 mt-1">
+                                                            <span className="text-xs leading-tight truncate text-[var(--text-primary)]/50 mt-1">
                                                                 {item.subtitle}
                                                             </span>
                                                         </div>
                                                     </div>
                                                     {isSelected && (
-                                                        <span className="material-symbols-rounded text-xs text-[#00e5ff] animate-pulse">
+                                                        <span className="material-symbols-rounded text-xs text-[var(--brand)] animate-pulse">
                                                             keyboard_return
                                                         </span>
                                                     )}
@@ -818,16 +975,16 @@ export default function Layout() {
                         </div>
 
                         {/* Footer / Shortcut Help */}
-                        <div className="flex items-center justify-between px-4 py-2 bg-black/20 border-t border-white/[0.04] text-[11px] text-white/40">
+                        <div className="flex items-center justify-between px-4 py-2 bg-[var(--card-bg)]/20 border-t border-[var(--card-border)] text-xs text-[var(--text-primary)]/40">
                             <div className="flex items-center gap-1.5">
                                 <span>Navigate:</span>
-                                <span className="px-1 py-0.5 rounded bg-white/5 border border-white/10 text-[11px] font-mono">↑↓</span>
+                                <span className="px-1 py-0.5 rounded bg-[var(--card-bg)]/5 border border-white/10 text-xs font-mono">↑↓</span>
                                 <span>Select:</span>
-                                <span className="px-1 py-0.5 rounded bg-white/5 border border-white/10 text-[11px] font-mono">⏎ Enter</span>
+                                <span className="px-1 py-0.5 rounded bg-[var(--card-bg)]/5 border border-white/10 text-xs font-mono">⏎ Enter</span>
                             </div>
                             <div>
                                 <span>Close:</span>
-                                <span className="px-1 py-0.5 rounded bg-white/5 border border-white/10 text-[11px] font-mono">ESC</span>
+                                <span className="px-1 py-0.5 rounded bg-[var(--card-bg)]/5 border border-white/10 text-xs font-mono">ESC</span>
                             </div>
                         </div>
                     </div>
@@ -837,7 +994,7 @@ export default function Layout() {
             {/* Floating Spotlight Toggle Button */}
             <button
                 onClick={() => setIsSpotlightOpen(true)}
-                className="fixed bottom-6 right-6 z-40 w-11 h-11 rounded-full flex items-center justify-center glass border border-[#00c2cc]/20 shadow-lg shadow-[#00c2cc]/10 hover:border-[#00e5ff]/50 hover:shadow-[#00e5ff]/20 transition-all duration-300 group cursor-pointer"
+                className="fixed bottom-6 right-6 z-40 w-11 h-11 rounded-full flex items-center justify-center premium-card border border-[#00B4D8]/20 shadow-lg shadow-[#00B4D8]/10 hover:border-[var(--brand)]/50 hover:shadow-[var(--brand)]/20 transition-all duration-300 group cursor-pointer"
                 style={{
                     background: 'rgba(15, 20, 32, 0.85)',
                     backdropFilter: 'blur(8px)'
@@ -845,8 +1002,8 @@ export default function Layout() {
                 title="Command Center (Ctrl+K / K)"
             >
                 {/* Outer pulsing shadow glow ring */}
-                <span className="absolute inset-0 rounded-full bg-[#00e5ff]/5 scale-100 group-hover:scale-120 group-hover:bg-[#00e5ff]/10 transition-all duration-500 animate-pulse" />
-                <span className="material-symbols-rounded text-[#00e5ff] text-lg font-bold group-hover:scale-110 transition-all duration-300">
+                <span className="absolute inset-0 rounded-full bg-[var(--brand)]/5 scale-100 group-hover:scale-120 group-hover:bg-[var(--brand)]/10 transition-all duration-500 animate-pulse" />
+                <span className="material-symbols-rounded text-[var(--brand)] text-lg font-bold group-hover:scale-110 transition-all duration-300">
                     terminal
                 </span>
             </button>
@@ -855,28 +1012,28 @@ export default function Layout() {
             {isGuideOpen && (
                 <div 
                     className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
-                    style={{ background: 'rgba(10, 15, 29, 0.7)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
+                    style={{ background: 'var(--bg-header)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
                     onClick={() => setIsGuideOpen(false)}
                 >
                     <div 
-                        className="w-full max-w-4xl h-[85vh] max-h-[700px] rounded-2xl overflow-hidden glass-elevated border border-white/[0.08] shadow-2xl animate-slide-up relative z-10 p-6 flex flex-col gap-5"
-                        style={{ background: 'rgba(20, 25, 41, 0.96)' }}
+                        className="w-full max-w-4xl h-[85vh] max-h-[700px] rounded-2xl overflow-hidden premium-card-elevated border border-[var(--card-border)] shadow-2xl animate-slide-up relative z-10 p-6 flex flex-col gap-5"
+                        style={{ background: 'var(--card-bg)' }}
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Header */}
-                        <div className="flex items-center justify-between border-b border-white/[0.06] pb-3.5 flex-shrink-0">
+                        <div className="flex items-center justify-between border-b border-[var(--card-border)] pb-3.5 flex-shrink-0">
                             <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#00e5ff]/10 text-[#00e5ff] border border-[#00e5ff]/20">
+                                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[var(--brand)]/10 text-[var(--brand)] border border-[var(--brand)]/20">
                                     <span className="material-symbols-rounded text-lg">info</span>
                                 </div>
                                 <div className="flex flex-col">
-                                    <h3 className="text-lg font-bold text-white font-serif" style={{ fontFamily: "'Lora', serif" }}>System Reference Guide</h3>
-                                    <p className="text-xs text-slate-400 mt-0.5">Learn about our inventory rules, expiry bands, and health scores.</p>
+                                    <h3 className="text-lg font-bold text-[var(--text-primary)] font-serif" style={{ fontFamily: "'Lora', serif" }}>System Reference Guide</h3>
+                                    <p className="text-xs text-[var(--text-secondary)] mt-0.5">Learn about our inventory rules, expiry bands, and health scores.</p>
                                 </div>
                             </div>
                             <button 
                                 onClick={() => setIsGuideOpen(false)}
-                                className="text-white/40 hover:text-white bg-white/5 hover:bg-white/10 w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all"
+                                className="text-[var(--text-primary)]/40 hover:text-[var(--text-primary)] bg-[var(--card-bg)]/5 hover:bg-[var(--card-bg)]/10 w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all"
                             >
                                 <span className="material-symbols-rounded text-base">close</span>
                             </button>
@@ -885,10 +1042,10 @@ export default function Layout() {
                         {/* Guide Content with internal tabs */}
                         <div className="flex flex-1 gap-6 overflow-hidden min-h-0">
                             {/* Tabs Column */}
-                            <div className="flex flex-col gap-1.5 w-[180px] border-r border-white/[0.06] pr-4 flex-shrink-0">
+                            <div className="flex flex-col gap-1.5 w-[180px] border-r border-[var(--card-border)] pr-4 flex-shrink-0">
                                 {[
                                     { key: 'workflow', label: 'Role Workflows', icon: 'route', color: '#f472b6' },
-                                    { key: 'expiry', label: 'Expiry Bands', icon: 'hourglass_empty', color: '#00e5ff' },
+                                    { key: 'expiry', label: 'Expiry Bands', icon: 'hourglass_empty', color: 'var(--brand)' },
                                     { key: 'stock', label: 'Stock & Movements', icon: 'warning', color: '#f59e0b' },
                                     { key: 'value', label: 'Stock Value', icon: 'payments', color: '#a78bfa' },
                                     { key: 'health', label: 'Branch Health', icon: 'favorite', color: '#10b981' }
@@ -900,7 +1057,7 @@ export default function Layout() {
                                         className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-[13px] font-bold transition-all text-left cursor-pointer border border-transparent"
                                         style={{
                                             background: guideTab === tab.key ? `${tab.color}12` : 'transparent',
-                                            color: guideTab === tab.key ? tab.color : 'rgba(255,255,255,0.6)',
+                                            color: guideTab === tab.key ? tab.color : 'var(--text-secondary)',
                                             borderColor: guideTab === tab.key ? `${tab.color}25` : 'transparent'
                                         }}
                                     >
@@ -916,13 +1073,13 @@ export default function Layout() {
                                     <div className="flex flex-col gap-4 animate-fade-in h-full">
                                         <div className="flex flex-col gap-1">
                                             <h4 className="text-base font-bold text-[#f472b6] uppercase tracking-wider">Role Operational Workflows</h4>
-                                            <p className="text-[13px] text-slate-300 leading-relaxed">
+                                            <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">
                                                 Select a role to view the custom visual lifecycle and quickly jump to key pages:
                                             </p>
                                         </div>
 
                                         {/* Segmented Selector */}
-                                        <div className="flex gap-2 p-1 bg-white/[0.03] border border-white/[0.06] rounded-xl self-start">
+                                        <div className="flex gap-2 p-1 bg-[var(--btn-secondary-hover)] border border-[var(--card-border)] rounded-xl self-start">
                                             {[
                                                 { role: 'Pharmacist', label: 'Pharmacist Flow', icon: 'local_pharmacy', color: '#60a5fa' },
                                                 { role: 'Manager', label: 'Manager Flow', icon: 'assignment_ind', color: '#f59e0b' },
@@ -937,7 +1094,7 @@ export default function Layout() {
                                                         className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer"
                                                         style={{
                                                             background: isActive ? item.color : 'transparent',
-                                                            color: isActive ? '#0a0d14' : 'var(--text-secondary)'
+                                                            color: isActive ? 'var(--bg-primary)' : 'var(--text-secondary)'
                                                         }}
                                                     >
                                                         <span className="material-symbols-rounded text-sm" style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}>
@@ -955,20 +1112,20 @@ export default function Layout() {
                                                 <>
                                                     {/* Step 1 */}
                                                     <div className="relative pl-7 group">
-                                                        <div className="absolute left-[-9px] top-4 w-4 h-4 rounded-full bg-[#0a0f1d] border-2 border-[#60a5fa] flex items-center justify-center">
+                                                        <div className="absolute left-[-9px] top-4 w-4 h-4 rounded-full bg-[var(--bg-primary)] border-2 border-[#60a5fa] flex items-center justify-center">
                                                             <div className="w-1.5 h-1.5 rounded-full bg-[#60a5fa]" />
                                                         </div>
-                                                        <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.03] transition-all">
+                                                        <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] hover:bg-[var(--btn-secondary-hover)] transition-all">
                                                             <div className="flex gap-4 items-start">
                                                                 <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#60a5fa]/10 text-[#60a5fa] border border-[#60a5fa]/20 flex-shrink-0 mt-0.5">
                                                                     <span className="material-symbols-rounded text-lg">search</span>
                                                                 </div>
                                                                 <div className="flex flex-col gap-1">
                                                                     <div className="flex items-center gap-2">
-                                                                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#60a5fa] bg-[#60a5fa]/10 px-2.5 py-0.5 rounded-full">Step 1</span>
-                                                                        <span className="text-sm font-bold text-white">Check Shelf Stock</span>
+                                                                        <span className="text-xs font-bold uppercase tracking-wider text-[#60a5fa] bg-[#60a5fa]/10 px-2.5 py-0.5 rounded-full">Step 1</span>
+                                                                        <span className="text-sm font-bold text-[var(--text-primary)]">Check Shelf Stock</span>
                                                                     </div>
-                                                                    <p className="text-xs text-slate-400 leading-relaxed">
+                                                                    <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
                                                                         Verify active inventory levels, safety threshold alerts, and brand listings in the centralized ledger.
                                                                     </p>
                                                                 </div>
@@ -976,7 +1133,7 @@ export default function Layout() {
                                                             <button 
                                                                 id="guide-btn-ledger-pharmacist"
                                                                 onClick={() => { navigate('/medicines'); setIsGuideOpen(false); }} 
-                                                                className="flex-shrink-0 flex items-center gap-1 text-xs px-3.5 py-2 rounded-xl bg-[#60a5fa]/10 border border-[#60a5fa]/20 hover:bg-[#60a5fa] hover:text-[#0a0d14] text-[#60a5fa] cursor-pointer font-bold transition-all duration-200 shadow-md shadow-[#60a5fa]/5"
+                                                                className="flex-shrink-0 flex items-center gap-1 text-xs px-3.5 py-2 rounded-xl bg-[#60a5fa]/10 border border-[#60a5fa]/20 hover:bg-[#60a5fa] hover:text-[var(--bg-primary)] text-[#60a5fa] cursor-pointer font-bold transition-all duration-200 shadow-md shadow-[#60a5fa]/5"
                                                             >
                                                                 <span>Ledger</span>
                                                                 <span className="material-symbols-rounded text-sm">arrow_forward</span>
@@ -986,20 +1143,20 @@ export default function Layout() {
 
                                                     {/* Step 2 */}
                                                     <div className="relative pl-7 group">
-                                                        <div className="absolute left-[-9px] top-4 w-4 h-4 rounded-full bg-[#0a0f1d] border-2 border-[#60a5fa] flex items-center justify-center">
+                                                        <div className="absolute left-[-9px] top-4 w-4 h-4 rounded-full bg-[var(--bg-primary)] border-2 border-[#60a5fa] flex items-center justify-center">
                                                             <div className="w-1.5 h-1.5 rounded-full bg-[#60a5fa]" />
                                                         </div>
-                                                        <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.03] transition-all">
+                                                        <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] hover:bg-[var(--btn-secondary-hover)] transition-all">
                                                             <div className="flex gap-4 items-start">
                                                                 <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#60a5fa]/10 text-[#60a5fa] border border-[#60a5fa]/20 flex-shrink-0 mt-0.5">
                                                                     <span className="material-symbols-rounded text-lg">sell</span>
                                                                 </div>
                                                                 <div className="flex flex-col gap-1">
                                                                     <div className="flex items-center gap-2">
-                                                                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#60a5fa] bg-[#60a5fa]/10 px-2.5 py-0.5 rounded-full">Step 2</span>
-                                                                        <span className="text-sm font-bold text-white">Dispense Units (Stock Out)</span>
+                                                                        <span className="text-xs font-bold uppercase tracking-wider text-[#60a5fa] bg-[#60a5fa]/10 px-2.5 py-0.5 rounded-full">Step 2</span>
+                                                                        <span className="text-sm font-bold text-[var(--text-primary)]">Dispense Units (Dispense Stock)</span>
                                                                     </div>
-                                                                    <p className="text-xs text-slate-400 leading-relaxed">
+                                                                    <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
                                                                         Process daily retail transactions or prescription orders, deducting units from the database in real-time.
                                                                     </p>
                                                                 </div>
@@ -1007,7 +1164,7 @@ export default function Layout() {
                                                             <button 
                                                                 id="guide-btn-transaction-pharmacist"
                                                                 onClick={() => { navigate('/inventory/transaction-new'); setIsGuideOpen(false); }} 
-                                                                className="flex-shrink-0 flex items-center gap-1 text-xs px-3.5 py-2 rounded-xl bg-[#60a5fa]/10 border border-[#60a5fa]/20 hover:bg-[#60a5fa] hover:text-[#0a0d14] text-[#60a5fa] cursor-pointer font-bold transition-all duration-200 shadow-md shadow-[#60a5fa]/5"
+                                                                className="flex-shrink-0 flex items-center gap-1 text-xs px-3.5 py-2 rounded-xl bg-[#60a5fa]/10 border border-[#60a5fa]/20 hover:bg-[#60a5fa] hover:text-[var(--bg-primary)] text-[#60a5fa] cursor-pointer font-bold transition-all duration-200 shadow-md shadow-[#60a5fa]/5"
                                                             >
                                                                 <span>Dispense</span>
                                                                 <span className="material-symbols-rounded text-sm">arrow_forward</span>
@@ -1017,20 +1174,20 @@ export default function Layout() {
 
                                                     {/* Step 3 */}
                                                     <div className="relative pl-7 group">
-                                                        <div className="absolute left-[-9px] top-4 w-4 h-4 rounded-full bg-[#0a0f1d] border-2 border-[#60a5fa] flex items-center justify-center">
+                                                        <div className="absolute left-[-9px] top-4 w-4 h-4 rounded-full bg-[var(--bg-primary)] border-2 border-[#60a5fa] flex items-center justify-center">
                                                             <div className="w-1.5 h-1.5 rounded-full bg-[#60a5fa]" />
                                                         </div>
-                                                        <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.03] transition-all">
+                                                        <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] hover:bg-[var(--btn-secondary-hover)] transition-all">
                                                             <div className="flex gap-4 items-start">
                                                                 <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#60a5fa]/10 text-[#60a5fa] border border-[#60a5fa]/20 flex-shrink-0 mt-0.5">
                                                                     <span className="material-symbols-rounded text-lg">local_shipping</span>
                                                                 </div>
                                                                 <div className="flex flex-col gap-1">
                                                                     <div className="flex items-center gap-2">
-                                                                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#60a5fa] bg-[#60a5fa]/10 px-2.5 py-0.5 rounded-full">Step 3</span>
-                                                                        <span className="text-sm font-bold text-white">Emergency Transfers</span>
+                                                                        <span className="text-xs font-bold uppercase tracking-wider text-[#60a5fa] bg-[#60a5fa]/10 px-2.5 py-0.5 rounded-full">Step 3</span>
+                                                                        <span className="text-sm font-bold text-[var(--text-primary)]">Emergency Transfers</span>
                                                                     </div>
-                                                                    <p className="text-xs text-slate-400 leading-relaxed">
+                                                                    <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
                                                                         Trigger network-wide transfers for critical out-of-stock items to get immediate relief from nearby branches.
                                                                     </p>
                                                                 </div>
@@ -1038,7 +1195,7 @@ export default function Layout() {
                                                             <button 
                                                                 id="guide-btn-emergency-pharmacist"
                                                                 onClick={() => { navigate('/emergency-support'); setIsGuideOpen(false); }} 
-                                                                className="flex-shrink-0 flex items-center gap-1 text-xs px-3.5 py-2 rounded-xl bg-[#60a5fa]/10 border border-[#60a5fa]/20 hover:bg-[#60a5fa] hover:text-[#0a0d14] text-[#60a5fa] cursor-pointer font-bold transition-all duration-200 shadow-md shadow-[#60a5fa]/5"
+                                                                className="flex-shrink-0 flex items-center gap-1 text-xs px-3.5 py-2 rounded-xl bg-[#60a5fa]/10 border border-[#60a5fa]/20 hover:bg-[#60a5fa] hover:text-[var(--bg-primary)] text-[#60a5fa] cursor-pointer font-bold transition-all duration-200 shadow-md shadow-[#60a5fa]/5"
                                                             >
                                                                 <span>Transfer</span>
                                                                 <span className="material-symbols-rounded text-sm">arrow_forward</span>
@@ -1052,20 +1209,20 @@ export default function Layout() {
                                                 <>
                                                     {/* Step 1 */}
                                                     <div className="relative pl-7 group">
-                                                        <div className="absolute left-[-9px] top-4 w-4 h-4 rounded-full bg-[#0a0f1d] border-2 border-[#f59e0b] flex items-center justify-center">
+                                                        <div className="absolute left-[-9px] top-4 w-4 h-4 rounded-full bg-[var(--bg-primary)] border-2 border-[#f59e0b] flex items-center justify-center">
                                                             <div className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
                                                         </div>
-                                                        <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.03] transition-all">
+                                                        <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] hover:bg-[var(--btn-secondary-hover)] transition-all">
                                                             <div className="flex gap-4 items-start">
                                                                 <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/20 flex-shrink-0 mt-0.5">
                                                                     <span className="material-symbols-rounded text-lg">hourglass_empty</span>
                                                                 </div>
                                                                 <div className="flex flex-col gap-1">
                                                                     <div className="flex items-center gap-2">
-                                                                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#f59e0b] bg-[#f59e0b]/10 px-2.5 py-0.5 rounded-full">Step 1</span>
-                                                                        <span className="text-sm font-bold text-white">Audit Shelf Health</span>
+                                                                        <span className="text-xs font-bold uppercase tracking-wider text-[#f59e0b] bg-[#f59e0b]/10 px-2.5 py-0.5 rounded-full">Step 1</span>
+                                                                        <span className="text-sm font-bold text-[var(--text-primary)]">Audit Shelf Health</span>
                                                                     </div>
-                                                                    <p className="text-xs text-slate-400 leading-relaxed">
+                                                                    <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
                                                                         Inspect dead stock valuations, track expiration waves, and discard Red Band (expiry &le; 30d) medicines.
                                                                     </p>
                                                                 </div>
@@ -1073,7 +1230,7 @@ export default function Layout() {
                                                             <button 
                                                                 id="guide-btn-expiry-manager"
                                                                 onClick={() => { navigate('/expiry-dashboard'); setIsGuideOpen(false); }} 
-                                                                className="flex-shrink-0 flex items-center gap-1 text-xs px-3.5 py-2 rounded-xl bg-[#f59e0b]/10 border border-[#f59e0b]/20 hover:bg-[#f59e0b] hover:text-[#0a0d14] text-[#f59e0b] cursor-pointer font-bold transition-all duration-200 shadow-md shadow-[#f59e0b]/5"
+                                                                className="flex-shrink-0 flex items-center gap-1 text-xs px-3.5 py-2 rounded-xl bg-[#f59e0b]/10 border border-[#f59e0b]/20 hover:bg-[#f59e0b] hover:text-[var(--bg-primary)] text-[#f59e0b] cursor-pointer font-bold transition-all duration-200 shadow-md shadow-[#f59e0b]/5"
                                                             >
                                                                 <span>Expiry</span>
                                                                 <span className="material-symbols-rounded text-sm">arrow_forward</span>
@@ -1083,20 +1240,20 @@ export default function Layout() {
 
                                                     {/* Step 2 */}
                                                     <div className="relative pl-7 group">
-                                                        <div className="absolute left-[-9px] top-4 w-4 h-4 rounded-full bg-[#0a0f1d] border-2 border-[#f59e0b] flex items-center justify-center">
+                                                        <div className="absolute left-[-9px] top-4 w-4 h-4 rounded-full bg-[var(--bg-primary)] border-2 border-[#f59e0b] flex items-center justify-center">
                                                             <div className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
                                                         </div>
-                                                        <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.03] transition-all">
+                                                        <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] hover:bg-[var(--btn-secondary-hover)] transition-all">
                                                             <div className="flex gap-4 items-start">
                                                                 <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/20 flex-shrink-0 mt-0.5">
                                                                     <span className="material-symbols-rounded text-lg">shopping_cart</span>
                                                                 </div>
                                                                 <div className="flex flex-col gap-1">
                                                                     <div className="flex items-center gap-2">
-                                                                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#f59e0b] bg-[#f59e0b]/10 px-2.5 py-0.5 rounded-full">Step 2</span>
-                                                                        <span className="text-sm font-bold text-white">Reorder Procurement</span>
+                                                                        <span className="text-xs font-bold uppercase tracking-wider text-[#f59e0b] bg-[#f59e0b]/10 px-2.5 py-0.5 rounded-full">Step 2</span>
+                                                                        <span className="text-sm font-bold text-[var(--text-primary)]">Reorder Procurement</span>
                                                                     </div>
-                                                                    <p className="text-xs text-slate-400 leading-relaxed">
+                                                                    <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
                                                                         Replenish stock using auto-calculated minimum thresholds, manage supplier listings, and submit purchase orders.
                                                                     </p>
                                                                 </div>
@@ -1104,7 +1261,7 @@ export default function Layout() {
                                                             <button 
                                                                 id="guide-btn-reorder-manager"
                                                                 onClick={() => { navigate('/reorder-intelligence'); setIsGuideOpen(false); }} 
-                                                                className="flex-shrink-0 flex items-center gap-1 text-xs px-3.5 py-2 rounded-xl bg-[#f59e0b]/10 border border-[#f59e0b]/20 hover:bg-[#f59e0b] hover:text-[#0a0d14] text-[#f59e0b] cursor-pointer font-bold transition-all duration-200 shadow-md shadow-[#f59e0b]/5"
+                                                                className="flex-shrink-0 flex items-center gap-1 text-xs px-3.5 py-2 rounded-xl bg-[#f59e0b]/10 border border-[#f59e0b]/20 hover:bg-[#f59e0b] hover:text-[var(--bg-primary)] text-[#f59e0b] cursor-pointer font-bold transition-all duration-200 shadow-md shadow-[#f59e0b]/5"
                                                             >
                                                                 <span>Reorder</span>
                                                                 <span className="material-symbols-rounded text-sm">arrow_forward</span>
@@ -1114,20 +1271,20 @@ export default function Layout() {
 
                                                     {/* Step 3 */}
                                                     <div className="relative pl-7 group">
-                                                        <div className="absolute left-[-9px] top-4 w-4 h-4 rounded-full bg-[#0a0f1d] border-2 border-[#f59e0b] flex items-center justify-center">
+                                                        <div className="absolute left-[-9px] top-4 w-4 h-4 rounded-full bg-[var(--bg-primary)] border-2 border-[#f59e0b] flex items-center justify-center">
                                                             <div className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
                                                         </div>
-                                                        <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.03] transition-all">
+                                                        <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] hover:bg-[var(--btn-secondary-hover)] transition-all">
                                                             <div className="flex gap-4 items-start">
                                                                 <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/20 flex-shrink-0 mt-0.5">
                                                                     <span className="material-symbols-rounded text-lg">add_box</span>
                                                                 </div>
                                                                 <div className="flex flex-col gap-1">
                                                                     <div className="flex items-center gap-2">
-                                                                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#f59e0b] bg-[#f59e0b]/10 px-2.5 py-0.5 rounded-full">Step 3</span>
-                                                                        <span className="text-sm font-bold text-white">Receive Deliveries (Stock In)</span>
+                                                                        <span className="text-xs font-bold uppercase tracking-wider text-[#f59e0b] bg-[#f59e0b]/10 px-2.5 py-0.5 rounded-full">Step 3</span>
+                                                                        <span className="text-sm font-bold text-[var(--text-primary)]">Receive Deliveries (Receive Stock)</span>
                                                                     </div>
-                                                                    <p className="text-xs text-slate-400 leading-relaxed">
+                                                                    <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
                                                                         Add units back into active inventory under specific batches and expiration dates when supplier orders arrive.
                                                                     </p>
                                                                 </div>
@@ -1135,9 +1292,9 @@ export default function Layout() {
                                                             <button 
                                                                 id="guide-btn-stockin-manager"
                                                                 onClick={() => { navigate('/inventory/transaction-new'); setIsGuideOpen(false); }} 
-                                                                className="flex-shrink-0 flex items-center gap-1 text-xs px-3.5 py-2 rounded-xl bg-[#f59e0b]/10 border border-[#f59e0b]/20 hover:bg-[#f59e0b] hover:text-[#0a0d14] text-[#f59e0b] cursor-pointer font-bold transition-all duration-200 shadow-md shadow-[#f59e0b]/5"
+                                                                className="flex-shrink-0 flex items-center gap-1 text-xs px-3.5 py-2 rounded-xl bg-[#f59e0b]/10 border border-[#f59e0b]/20 hover:bg-[#f59e0b] hover:text-[var(--bg-primary)] text-[#f59e0b] cursor-pointer font-bold transition-all duration-200 shadow-md shadow-[#f59e0b]/5"
                                                             >
-                                                                <span>Stock In</span>
+                                                                <span>Receive Stock</span>
                                                                 <span className="material-symbols-rounded text-sm">arrow_forward</span>
                                                             </button>
                                                         </div>
@@ -1149,20 +1306,20 @@ export default function Layout() {
                                                 <>
                                                     {/* Step 1 */}
                                                     <div className="relative pl-7 group">
-                                                        <div className="absolute left-[-9px] top-4 w-4 h-4 rounded-full bg-[#0a0f1d] border-2 border-[#10b981] flex items-center justify-center">
+                                                        <div className="absolute left-[-9px] top-4 w-4 h-4 rounded-full bg-[var(--bg-primary)] border-2 border-[#10b981] flex items-center justify-center">
                                                             <div className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
                                                         </div>
-                                                        <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.03] transition-all">
+                                                        <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] hover:bg-[var(--btn-secondary-hover)] transition-all">
                                                             <div className="flex gap-4 items-start">
                                                                 <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#10b981]/10 text-[#10b981] border border-[#10b981]/20 flex-shrink-0 mt-0.5">
                                                                     <span className="material-symbols-rounded text-lg">storefront</span>
                                                                 </div>
                                                                 <div className="flex flex-col gap-1">
                                                                     <div className="flex items-center gap-2">
-                                                                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#10b981] bg-[#10b981]/10 px-2.5 py-0.5 rounded-full">Step 1</span>
-                                                                        <span className="text-sm font-bold text-white">Onboard Branches</span>
+                                                                        <span className="text-xs font-bold uppercase tracking-wider text-[#10b981] bg-[#10b981]/10 px-2.5 py-0.5 rounded-full">Step 1</span>
+                                                                        <span className="text-sm font-bold text-[var(--text-primary)]">Onboard Branches</span>
                                                                     </div>
-                                                                    <p className="text-xs text-slate-400 leading-relaxed">
+                                                                    <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
                                                                         Register new pharmacy branches into the organization networks and configure branch-level information.
                                                                     </p>
                                                                 </div>
@@ -1170,7 +1327,7 @@ export default function Layout() {
                                                             <button 
                                                                 id="guide-btn-branches-admin"
                                                                 onClick={() => { navigate('/pharmacies'); setIsGuideOpen(false); }} 
-                                                                className="flex-shrink-0 flex items-center gap-1 text-xs px-3.5 py-2 rounded-xl bg-[#10b981]/10 border border-[#10b981]/20 hover:bg-[#10b981] hover:text-[#0a0d14] text-[#10b981] cursor-pointer font-bold transition-all duration-200 shadow-md shadow-[#10b981]/5"
+                                                                className="flex-shrink-0 flex items-center gap-1 text-xs px-3.5 py-2 rounded-xl bg-[#10b981]/10 border border-[#10b981]/20 hover:bg-[#10b981] hover:text-[var(--bg-primary)] text-[#10b981] cursor-pointer font-bold transition-all duration-200 shadow-md shadow-[#10b981]/5"
                                                             >
                                                                 <span>Branches</span>
                                                                 <span className="material-symbols-rounded text-sm">arrow_forward</span>
@@ -1180,20 +1337,20 @@ export default function Layout() {
 
                                                     {/* Step 2 */}
                                                     <div className="relative pl-7 group">
-                                                        <div className="absolute left-[-9px] top-4 w-4 h-4 rounded-full bg-[#0a0f1d] border-2 border-[#10b981] flex items-center justify-center">
+                                                        <div className="absolute left-[-9px] top-4 w-4 h-4 rounded-full bg-[var(--bg-primary)] border-2 border-[#10b981] flex items-center justify-center">
                                                             <div className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
                                                         </div>
-                                                        <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.03] transition-all">
+                                                        <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] hover:bg-[var(--btn-secondary-hover)] transition-all">
                                                             <div className="flex gap-4 items-start">
                                                                 <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#10b981]/10 text-[#10b981] border border-[#10b981]/20 flex-shrink-0 mt-0.5">
                                                                     <span className="material-symbols-rounded text-lg">group</span>
                                                                 </div>
                                                                 <div className="flex flex-col gap-1">
                                                                     <div className="flex items-center gap-2">
-                                                                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#10b981] bg-[#10b981]/10 px-2.5 py-0.5 rounded-full">Step 2</span>
-                                                                        <span className="text-sm font-bold text-white">Configure Staff Credentials</span>
+                                                                        <span className="text-xs font-bold uppercase tracking-wider text-[#10b981] bg-[#10b981]/10 px-2.5 py-0.5 rounded-full">Step 2</span>
+                                                                        <span className="text-sm font-bold text-[var(--text-primary)]">Configure Staff Credentials</span>
                                                                     </div>
-                                                                    <p className="text-xs text-slate-400 leading-relaxed">
+                                                                    <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
                                                                         Onboard new employee accounts, define role-based access limits, and assign accounts to specific branch locations.
                                                                     </p>
                                                                 </div>
@@ -1201,7 +1358,7 @@ export default function Layout() {
                                                             <button 
                                                                 id="guide-btn-users-admin"
                                                                 onClick={() => { navigate('/users'); setIsGuideOpen(false); }} 
-                                                                className="flex-shrink-0 flex items-center gap-1 text-xs px-3.5 py-2 rounded-xl bg-[#10b981]/10 border border-[#10b981]/20 hover:bg-[#10b981] hover:text-[#0a0d14] text-[#10b981] cursor-pointer font-bold transition-all duration-200 shadow-md shadow-[#10b981]/5"
+                                                                className="flex-shrink-0 flex items-center gap-1 text-xs px-3.5 py-2 rounded-xl bg-[#10b981]/10 border border-[#10b981]/20 hover:bg-[#10b981] hover:text-[var(--bg-primary)] text-[#10b981] cursor-pointer font-bold transition-all duration-200 shadow-md shadow-[#10b981]/5"
                                                             >
                                                                 <span>Users</span>
                                                                 <span className="material-symbols-rounded text-sm">arrow_forward</span>
@@ -1211,20 +1368,20 @@ export default function Layout() {
 
                                                     {/* Step 3 */}
                                                     <div className="relative pl-7 group">
-                                                        <div className="absolute left-[-9px] top-4 w-4 h-4 rounded-full bg-[#0a0f1d] border-2 border-[#10b981] flex items-center justify-center">
+                                                        <div className="absolute left-[-9px] top-4 w-4 h-4 rounded-full bg-[var(--bg-primary)] border-2 border-[#10b981] flex items-center justify-center">
                                                             <div className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
                                                         </div>
-                                                        <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.03] transition-all">
+                                                        <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] hover:bg-[var(--btn-secondary-hover)] transition-all">
                                                             <div className="flex gap-4 items-start">
                                                                 <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#10b981]/10 text-[#10b981] border border-[#10b981]/20 flex-shrink-0 mt-0.5">
                                                                     <span className="material-symbols-rounded text-lg">compare_arrows</span>
                                                                 </div>
                                                                 <div className="flex flex-col gap-1">
                                                                     <div className="flex items-center gap-2">
-                                                                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#10b981] bg-[#10b981]/10 px-2.5 py-0.5 rounded-full">Step 3</span>
-                                                                        <span className="text-sm font-bold text-white">Compare Network Analytics</span>
+                                                                        <span className="text-xs font-bold uppercase tracking-wider text-[#10b981] bg-[#10b981]/10 px-2.5 py-0.5 rounded-full">Step 3</span>
+                                                                        <span className="text-sm font-bold text-[var(--text-primary)]">Compare Network Analytics</span>
                                                                     </div>
-                                                                    <p className="text-xs text-slate-400 leading-relaxed">
+                                                                    <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
                                                                         Monitor stock valuation, staff sizing, and average health score metrics across all branches in the network.
                                                                     </p>
                                                                 </div>
@@ -1232,7 +1389,7 @@ export default function Layout() {
                                                             <button 
                                                                 id="guide-btn-compare-admin"
                                                                 onClick={() => { navigate('/branch-comparison'); setIsGuideOpen(false); }} 
-                                                                className="flex-shrink-0 flex items-center gap-1 text-xs px-3.5 py-2 rounded-xl bg-[#10b981]/10 border border-[#10b981]/20 hover:bg-[#10b981] hover:text-[#0a0d14] text-[#10b981] cursor-pointer font-bold transition-all duration-200 shadow-md shadow-[#10b981]/5"
+                                                                className="flex-shrink-0 flex items-center gap-1 text-xs px-3.5 py-2 rounded-xl bg-[#10b981]/10 border border-[#10b981]/20 hover:bg-[#10b981] hover:text-[var(--bg-primary)] text-[#10b981] cursor-pointer font-bold transition-all duration-200 shadow-md shadow-[#10b981]/5"
                                                             >
                                                                 <span>Compare</span>
                                                                 <span className="material-symbols-rounded text-sm">arrow_forward</span>
@@ -1248,8 +1405,8 @@ export default function Layout() {
                                 {guideTab === 'expiry' && (
                                     <div className="flex flex-col gap-4 animate-fade-in h-full">
                                         <div className="flex flex-col gap-1">
-                                            <h4 className="text-base font-bold text-[#00e5ff] uppercase tracking-wider">Expiry Intelligence Bands</h4>
-                                            <p className="text-[13px] text-slate-300 leading-relaxed">
+                                            <h4 className="text-base font-bold text-[var(--brand)] uppercase tracking-wider">Expiry Intelligence Bands</h4>
+                                            <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">
                                                 Shelf-life zones mapped automatically depending on remaining days to expiration:
                                             </p>
                                         </div>
@@ -1285,18 +1442,18 @@ export default function Layout() {
                                             ].map(b => (
                                                 <div 
                                                     key={b.label} 
-                                                    className="p-4 rounded-xl border flex flex-col gap-3 justify-between bg-white/[0.01]" 
+                                                    className="p-4 rounded-xl border flex flex-col gap-3 justify-between bg-[var(--card-bg)]" 
                                                     style={{ borderColor: b.border, background: b.bg }}
                                                 >
                                                     <div className="flex flex-col gap-3">
                                                         <div className="flex items-center justify-between">
-                                                            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-black/30" style={{ color: b.color }}>
+                                                            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--card-bg)]/30" style={{ color: b.color }}>
                                                                 <span className="material-symbols-rounded text-base">{b.icon}</span>
                                                             </div>
-                                                            <span className="text-[11px] px-2 py-0.5 rounded bg-black/45 text-white/90 font-mono tracking-tight">{b.range}</span>
+                                                            <span className="text-xs px-2 py-0.5 rounded bg-[var(--card-bg)]/45 text-[var(--text-primary)]/90 font-mono tracking-tight">{b.range}</span>
                                                         </div>
-                                                        <span className="text-xs font-bold text-white leading-tight">{b.label}</span>
-                                                        <p className="text-xs text-slate-400 leading-relaxed mt-0.5">{b.desc}</p>
+                                                        <span className="text-xs font-bold text-[var(--text-primary)] leading-tight">{b.label}</span>
+                                                        <p className="text-xs text-[var(--text-secondary)] leading-relaxed mt-0.5">{b.desc}</p>
                                                     </div>
                                                 </div>
                                             ))}
@@ -1308,26 +1465,26 @@ export default function Layout() {
                                     <div className="flex flex-col gap-4 animate-fade-in h-full">
                                         <div className="flex flex-col gap-1">
                                             <h4 className="text-base font-bold text-[#f59e0b] uppercase tracking-wider">Inventory Statuses & Movements</h4>
-                                            <p className="text-[13px] text-slate-300 leading-relaxed">
+                                            <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">
                                                 Understand how the ledger tracks product levels and records adjustments:
                                             </p>
                                         </div>
                                         <div className="grid grid-cols-2 gap-5 mt-2">
                                             {/* Left Column: Stock Levels */}
                                             <div className="flex flex-col gap-3">
-                                                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-white/[0.06] pb-1.5">Stock Alert Levels</span>
+                                                <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)] border-b border-[var(--card-border)] pb-1.5">Stock Alert Levels</span>
                                                 {[
                                                     { label: 'Out of Stock', icon: 'gpp_bad', color: '#f87171', bg: 'rgba(248,113,113,0.03)', desc: '0 units left in active inventory. Immediately blocks prescriptions from checkout.' },
                                                     { label: 'Low Stock Alert', icon: 'gpp_maybe', color: '#f59e0b', bg: 'rgba(245,158,11,0.03)', desc: 'Available stock is below the designated branch safety point (triggers order notifications).' },
                                                     { label: 'Reorder Safety Point', icon: 'verified_user', color: '#34d399', bg: 'rgba(52,211,153,0.03)', desc: 'Custom branch minimum thresholds. Defaults to 20 units if not configured manually.' }
                                                 ].map(s => (
-                                                    <div key={s.label} className="flex gap-3.5 items-start bg-white/[0.01] border border-white/[0.04] p-3.5 rounded-xl hover:bg-white/[0.02] transition-colors" style={{ background: s.bg }}>
-                                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-black/20 flex-shrink-0" style={{ color: s.color }}>
+                                                    <div key={s.label} className="flex gap-3.5 items-start bg-[var(--card-bg)] border border-[var(--card-border)] p-3.5 rounded-xl hover:bg-[var(--card-bg)]/[0.02] transition-colors" style={{ background: s.bg }}>
+                                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--card-bg)]/20 flex-shrink-0" style={{ color: s.color }}>
                                                             <span className="material-symbols-rounded text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>{s.icon}</span>
                                                         </div>
                                                         <div className="flex flex-col">
-                                                            <span className="text-xs font-bold text-white leading-none">{s.label}</span>
-                                                            <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">{s.desc}</p>
+                                                            <span className="text-xs font-bold text-[var(--text-primary)] leading-none">{s.label}</span>
+                                                            <p className="text-xs text-[var(--text-secondary)] mt-1.5 leading-relaxed">{s.desc}</p>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -1335,19 +1492,19 @@ export default function Layout() {
 
                                             {/* Right Column: Stock Movements */}
                                             <div className="flex flex-col gap-3">
-                                                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-white/[0.06] pb-1.5">Ledger Movements</span>
+                                                <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)] border-b border-[var(--card-border)] pb-1.5">Ledger Movements</span>
                                                 {[
-                                                    { label: 'Stocked In', icon: 'add_circle', color: '#34d399', bg: 'rgba(52,211,153,0.03)', desc: 'Add units to inventory (when new orders are delivered by supplier or branch transfer).' },
-                                                    { label: 'Stocked Out', icon: 'remove_circle', color: '#60a5fa', bg: 'rgba(96,165,250,0.03)', desc: 'Deduct units (when sold to customers, shipped to other locations, or expired).' },
+                                                    { label: 'Receive Stock', icon: 'add_circle', color: '#34d399', bg: 'rgba(52,211,153,0.03)', desc: 'Add units to inventory (when new orders are delivered by supplier or branch transfer).' },
+                                                    { label: 'Dispense Stock', icon: 'remove_circle', color: '#60a5fa', bg: 'rgba(96,165,250,0.03)', desc: 'Deduct units (when sold to customers, shipped to other locations, or expired).' },
                                                     { label: 'Adjustments', icon: 'published_with_changes', color: '#a78bfa', bg: 'rgba(167,139,250,0.03)', desc: 'Manual override corrections to resolve physical count audits, damage, or losses.' }
                                                 ].map(s => (
-                                                    <div key={s.label} className="flex gap-3.5 items-start bg-white/[0.01] border border-white/[0.04] p-3.5 rounded-xl hover:bg-white/[0.02] transition-colors" style={{ background: s.bg }}>
-                                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-black/20 flex-shrink-0" style={{ color: s.color }}>
+                                                    <div key={s.label} className="flex gap-3.5 items-start bg-[var(--card-bg)] border border-[var(--card-border)] p-3.5 rounded-xl hover:bg-[var(--card-bg)]/[0.02] transition-colors" style={{ background: s.bg }}>
+                                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--card-bg)]/20 flex-shrink-0" style={{ color: s.color }}>
                                                             <span className="material-symbols-rounded text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>{s.icon}</span>
                                                         </div>
                                                         <div className="flex flex-col">
-                                                            <span className="text-xs font-bold text-white leading-none">{s.label}</span>
-                                                            <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">{s.desc}</p>
+                                                            <span className="text-xs font-bold text-[var(--text-primary)] leading-none">{s.label}</span>
+                                                            <p className="text-xs text-[var(--text-secondary)] mt-1.5 leading-relaxed">{s.desc}</p>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -1360,7 +1517,7 @@ export default function Layout() {
                                     <div className="flex flex-col gap-4 animate-fade-in h-full">
                                         <div className="flex flex-col gap-1">
                                             <h4 className="text-base font-bold text-[#a78bfa] uppercase tracking-wider">Financial & Catalog Metrics</h4>
-                                            <p className="text-[13px] text-slate-300 leading-relaxed">
+                                            <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">
                                                 How financial valuations and portfolio statistics are calculated on the dashboards:
                                             </p>
                                         </div>
@@ -1395,17 +1552,17 @@ export default function Layout() {
                                                     desc: 'The diversity count of registered medicine types in the ledger, regardless of the individual unit stock levels.' 
                                                 }
                                             ].map(v => (
-                                                <div key={v.label} className="p-4 rounded-xl border border-white/[0.04] bg-white/[0.01] flex flex-col gap-2.5 justify-between hover:bg-white/[0.02] transition-colors">
+                                                <div key={v.label} className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] flex flex-col gap-2.5 justify-between hover:bg-[var(--card-bg)]/[0.02] transition-colors">
                                                     <div className="flex flex-col gap-2">
                                                         <div className="flex items-center gap-2.5">
-                                                            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-black/20" style={{ color: v.color }}>
+                                                            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--card-bg)]/20" style={{ color: v.color }}>
                                                                 <span className="material-symbols-rounded text-base" style={{ fontVariationSettings: "'FILL' 1" }}>{v.icon}</span>
                                                             </div>
-                                                            <span className="text-xs font-bold text-white">{v.label}</span>
+                                                            <span className="text-xs font-bold text-[var(--text-primary)]">{v.label}</span>
                                                         </div>
-                                                        <p className="text-xs text-slate-400 leading-relaxed mt-1">{v.desc}</p>
+                                                        <p className="text-xs text-[var(--text-secondary)] leading-relaxed mt-1">{v.desc}</p>
                                                     </div>
-                                                    <div className="text-[10px] font-mono bg-black/25 px-2.5 py-1 rounded text-slate-400 self-start">
+                                                    <div className="text-xs font-mono bg-[var(--card-bg)]/25 px-2.5 py-1 rounded text-[var(--text-secondary)] self-start">
                                                         Formula: {v.formula}
                                                     </div>
                                                 </div>
@@ -1418,7 +1575,7 @@ export default function Layout() {
                                     <div className="flex flex-col gap-4 animate-fade-in h-full">
                                         <div className="flex flex-col gap-1">
                                             <h4 className="text-base font-bold text-[#10b981] uppercase tracking-wider">Branch Health Calculation</h4>
-                                            <p className="text-[13px] text-slate-300 leading-relaxed">
+                                            <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">
                                                 All branches begin each day with a perfect score of **100**. Point deductions are calculated automatically for active inventory issues:
                                             </p>
                                         </div>
@@ -1430,7 +1587,7 @@ export default function Layout() {
                                             </div>
                                             <div className="flex flex-col">
                                                 <span className="text-xs font-bold text-[#10b981]">Baseline Grade A Branch Health</span>
-                                                <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                                                <p className="text-xs text-[var(--text-secondary)] mt-1 leading-relaxed">
                                                     Deductions apply only to active medications with positive stock. Expired or low-stock items cause points to be deducted automatically.
                                                 </p>
                                             </div>
@@ -1443,15 +1600,15 @@ export default function Layout() {
                                                 { label: 'Out of Stock Items', cost: '-10 points', limit: 'Maximum -20 pts', desc: 'Active catalog medicines with exactly 0 stock units.', color: '#ef4444', bg: 'rgba(239,68,68,0.02)', border: 'rgba(239,68,68,0.1)' },
                                                 { label: 'Low Stock Items', cost: '-5 points', limit: 'Maximum -20 pts', desc: 'Active stock levels that sit below the reorder point.', color: '#60a5fa', bg: 'rgba(96,165,250,0.02)', border: 'rgba(96,165,250,0.1)' }
                                             ].map(p => (
-                                                <div key={p.label} className="p-3.5 rounded-xl border flex flex-col gap-2 justify-between bg-white/[0.01]" style={{ borderColor: p.border, background: p.bg }}>
+                                                <div key={p.label} className="p-3.5 rounded-xl border flex flex-col gap-2 justify-between bg-[var(--card-bg)]" style={{ borderColor: p.border, background: p.bg }}>
                                                     <div className="flex flex-col gap-1.5">
                                                         <div className="flex justify-between items-center">
-                                                            <span className="text-xs font-bold text-white">{p.label}</span>
-                                                            <span className="text-xs font-bold font-mono px-2 py-0.5 rounded bg-black/25" style={{ color: p.color }}>{p.cost}</span>
+                                                            <span className="text-xs font-bold text-[var(--text-primary)]">{p.label}</span>
+                                                            <span className="text-xs font-bold font-mono px-2 py-0.5 rounded bg-[var(--card-bg)]/25" style={{ color: p.color }}>{p.cost}</span>
                                                         </div>
-                                                        <p className="text-xs text-slate-400 leading-normal mt-0.5">{p.desc}</p>
+                                                        <p className="text-xs text-[var(--text-secondary)] leading-normal mt-0.5">{p.desc}</p>
                                                     </div>
-                                                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">{p.limit}</span>
+                                                    <span className="text-xs text-[var(--text-secondary)] font-bold uppercase tracking-wider mt-1">{p.limit}</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -1461,11 +1618,11 @@ export default function Layout() {
                         </div>
 
                         {/* Footer */}
-                        <div className="flex justify-end pt-3 border-t border-white/[0.06] flex-shrink-0">
+                        <div className="flex justify-end pt-3 border-t border-[var(--card-border)] flex-shrink-0">
                             <button 
                                 onClick={() => setIsGuideOpen(false)}
-                                className="px-4 py-2 rounded-xl text-xs font-bold cursor-pointer text-slate-900 transition-all shadow-lg shadow-[#00c2cc]/10 hover:shadow-[#00c2cc]/20 hover:scale-[1.02] active:scale-[0.98] duration-200"
-                                style={{ background: 'linear-gradient(135deg, #00c2cc 0%, #0099a8 100%)' }}
+                                className="px-4 py-2 rounded-xl text-xs font-bold cursor-pointer text-[var(--text-primary)] transition-all shadow-lg shadow-[#00B4D8]/10 hover:shadow-[#00B4D8]/20 hover:scale-[1.02] active:scale-[0.98] duration-200"
+                                style={{ background: 'linear-gradient(135deg, #00B4D8 0%, #0099a8 100%)' }}
                             >
                                 Got it, thanks!
                             </button>

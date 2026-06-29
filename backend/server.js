@@ -3,12 +3,13 @@ import session from 'express-session';
 import MongoStore from 'connect-mongo';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import rateLimit from 'express-rate-limit';
 import connectDB from './config/db.js';
 import { protect, requireRoles } from './middleware/authMiddleware.js';
 import { login, logout, getMe, getPharmacies } from './controllers/authController.js';
 import { getMedicines, getMedicineById, addMedicine, updateMedicine, getMedicineLogs } from './controllers/medicineController.js';
 import { postStockIn, postStockOut, postAdjustment, getHistory } from './controllers/inventoryController.js';
-import { getDashboardData, getAdminBranchesComparison, getDashboardPriorities } from './controllers/analyticsController.js';
+import { getDashboardData, getAdminBranchesComparison, getDashboardPriorities, getDashboardHealthBreakdown } from './controllers/analyticsController.js';
 import { getReorderQueue, createReorderRequest, completeReorderRequest, generateDraftPO } from './controllers/reorderController.js';
 import { getAlerts, markAlertAsRead } from './controllers/alertController.js';
 import { exportAuditTrailCSV } from './controllers/complianceController.js';
@@ -97,8 +98,15 @@ app.use(session({
     }
 }));
 
+// Rate limiting for login
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // limit each IP to 5 requests per windowMs
+    message: { message: 'Too many login attempts from this IP, please try again after 15 minutes' }
+});
+
 // API Routes
-app.post('/api/auth/login', login);
+app.post('/api/auth/login', loginLimiter, login);
 app.post('/api/auth/logout', logout);
 app.get('/api/auth/me', getMe);
 app.get('/api/auth/pharmacies', getPharmacies);
@@ -132,6 +140,7 @@ app.get('/api/inventory/history', protect, getHistory);
 app.get('/api/analytics/dashboard', protect, getDashboardData);
 app.get('/api/analytics/admin/branches', protect, getAdminBranchesComparison);
 app.get('/api/dashboard/priorities', protect, getDashboardPriorities);
+app.get('/api/dashboard/health-breakdown', protect, getDashboardHealthBreakdown);
 
 app.get('/api/reorders', protect, getReorderQueue);
 app.post('/api/reorders', protect, createReorderRequest);

@@ -3,18 +3,29 @@ import InventoryTransaction from '../models/InventoryTransaction.js';
 // Export compliance audit trail to CSV format (Drugs & Cosmetics Act compliant audit log)
 export const exportAuditTrailCSV = async (req, res) => {
     try {
-        const pharmacyId = req.user.pharmacyId;
+        const { branchId } = req.query;
+        const query = {};
+        if (req.user.role === 'Admin') {
+            if (branchId) {
+                query.pharmacyId = branchId;
+            }
+        } else {
+            query.pharmacyId = req.user.pharmacyId;
+        }
 
-        const transactions = await InventoryTransaction.find({ pharmacyId })
+        const transactions = await InventoryTransaction.find(query)
             .populate('medicineId', 'name ndc category price')
             .populate('userId', 'username')
+            .populate('pharmacyId', 'name branchCode')
             .sort({ createdAt: -1 });
 
         // CSV headers
-        let csvContent = 'Date,Transaction Type,Medicine Name,NDC,Category,Quantity Changed,Unit Price (INR),Batch Number,Supplier,Received Date,Operator (User),Reason,Notes\n';
+        let csvContent = 'Date,Branch Code,Branch Name,Transaction Type,Medicine Name,NDC,Category,Quantity Changed,Unit Price (INR),Batch Number,Supplier,Received Date,Operator (User),Reason,Notes\n';
 
         transactions.forEach(t => {
             const dateStr = t.createdAt ? new Date(t.createdAt).toISOString() : '';
+            const bCode = t.pharmacyId ? t.pharmacyId.branchCode : '';
+            const bName = t.pharmacyId ? t.pharmacyId.name.replace(/"/g, '""') : 'Unknown Branch';
             const type = t.transactionType || '';
             const name = t.medicineId ? t.medicineId.name.replace(/"/g, '""') : 'Unknown Medicine';
             const ndc = t.medicineId ? t.medicineId.ndc : '';
@@ -28,7 +39,7 @@ export const exportAuditTrailCSV = async (req, res) => {
             const reason = t.reason ? t.reason.replace(/"/g, '""') : '';
             const notes = t.notes ? t.notes.replace(/"/g, '""') : '';
 
-            csvContent += `"${dateStr}","${type}","${name}","${ndc}","${cat}",${qty},${price},"${batch}","${supplier}","${rxDate}","${operator}","${reason}","${notes}"\n`;
+            csvContent += `"${dateStr}","${bCode}","${bName}","${type}","${name}","${ndc}","${cat}",${qty},${price},"${batch}","${supplier}","${rxDate}","${operator}","${reason}","${notes}"\n`;
         });
 
         res.setHeader('Content-Type', 'text/csv');

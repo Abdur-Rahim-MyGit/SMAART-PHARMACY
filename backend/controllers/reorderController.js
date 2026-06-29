@@ -8,7 +8,10 @@ import Supplier from '../models/Supplier.js';
 // Get reorder queue (medicines below reorderPoint with no active orders, plus current active orders)
 export const getReorderQueue = async (req, res) => {
     try {
-        const pharmacyId = req.user.pharmacyId;
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
 
         // Fetch all active/inactive medicines below reorderPoint, populating suppliers
         const medicines = await Medicine.find({
@@ -56,14 +59,19 @@ export const createReorderRequest = async (req, res) => {
             return res.status(400).json({ message: 'Medicine ID and a valid quantity are required.' });
         }
 
-        const medicine = await Medicine.findOne({ _id: medicineId, pharmacyId: req.user.pharmacyId });
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
+
+        const medicine = await Medicine.findOne({ _id: medicineId, pharmacyId });
         if (!medicine) {
             return res.status(404).json({ message: 'Medicine not found.' });
         }
 
         const request = new ReorderRequest({
             medicineId,
-            pharmacyId: req.user.pharmacyId,
+            pharmacyId,
             quantityNeeded,
             supplier: supplier || medicine.supplier || 'Generic Supplier',
             status: 'Ordered',
@@ -81,9 +89,14 @@ export const createReorderRequest = async (req, res) => {
 // Complete a reorder request (marks as arrived, updates stock, writes stock-in transaction)
 export const completeReorderRequest = async (req, res) => {
     try {
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
+
         const request = await ReorderRequest.findOne({
             _id: req.params.id,
-            pharmacyId: req.user.pharmacyId
+            pharmacyId
         });
 
         if (!request) {
@@ -94,7 +107,7 @@ export const completeReorderRequest = async (req, res) => {
             return res.status(400).json({ message: 'This reorder request has already been completed.' });
         }
 
-        const medicine = await Medicine.findOne({ _id: request.medicineId, pharmacyId: req.user.pharmacyId });
+        const medicine = await Medicine.findOne({ _id: request.medicineId, pharmacyId });
         if (!medicine) {
             return res.status(404).json({ message: 'Associated medicine not found in catalog.' });
         }
@@ -113,7 +126,7 @@ export const completeReorderRequest = async (req, res) => {
         // Write Compliance transaction record
         const transaction = new InventoryTransaction({
             medicineId: medicine._id,
-            pharmacyId: req.user.pharmacyId,
+            pharmacyId,
             userId: req.user.id,
             transactionType: 'Stock In',
             quantityChanged: request.quantityNeeded,
@@ -126,7 +139,7 @@ export const completeReorderRequest = async (req, res) => {
         // Write Inventory Audit log record
         const log = new InventoryLog({
             medicineId: medicine._id,
-            pharmacyId: req.user.pharmacyId,
+            pharmacyId,
             userId: req.user.id,
             changeType: 'StockUpdate',
             quantityChanged: request.quantityNeeded,
@@ -154,12 +167,17 @@ export const generateDraftPO = async (req, res) => {
             return res.status(400).json({ message: 'Medicine ID, quantity, and supplier are required.' });
         }
 
-        const supplier = await Supplier.findOne({ _id: supplierId, pharmacyId: req.user.pharmacyId });
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
+
+        const supplier = await Supplier.findOne({ _id: supplierId, pharmacyId });
         if (!supplier) {
             return res.status(404).json({ message: 'Supplier not found.' });
         }
 
-        const medicine = await Medicine.findOne({ _id: medicineId, pharmacyId: req.user.pharmacyId });
+        const medicine = await Medicine.findOne({ _id: medicineId, pharmacyId });
         if (!medicine) {
             return res.status(404).json({ message: 'Medicine not found.' });
         }
@@ -179,7 +197,7 @@ export const generateDraftPO = async (req, res) => {
         const po = new PurchaseOrder({
             poNumber,
             supplierId,
-            pharmacyId: req.user.pharmacyId,
+            pharmacyId,
             medicines: [{
                 medicineId,
                 name: medicine.name,

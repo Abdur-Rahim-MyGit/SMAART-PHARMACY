@@ -173,18 +173,27 @@ export const getDashboardData = async (req, res) => {
             createdAt: { $gte: sevenDaysAgo }
         }).sort({ createdAt: 1 });
 
-        // Initialize 7 days list
+        // Helper to get local YYYY-MM-DD
+        const getLocalDateString = (d) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        // Initialize 7 days list based on local dates
         const dailyMovementsMap = {};
         for (let i = 0; i < 7; i++) {
             const d = new Date();
             d.setDate(d.getDate() - (6 - i));
-            const dateStr = d.toISOString().split('T')[0];
+            const dateStr = getLocalDateString(d);
             const label = d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
             dailyMovementsMap[dateStr] = { date: dateStr, label, stockIn: 0, stockOut: 0 };
         }
 
         last7DaysTransactions.forEach(t => {
-            const dateStr = new Date(t.createdAt).toISOString().split('T')[0];
+            const tDate = new Date(t.createdAt);
+            const dateStr = getLocalDateString(tDate);
             if (dailyMovementsMap[dateStr]) {
                 if (t.transactionType === 'Stock In') {
                     dailyMovementsMap[dateStr].stockIn += Math.abs(t.quantityChanged);
@@ -519,14 +528,25 @@ export const getDashboardPriorities = async (req, res) => {
 
         // Critical Expiries
         if (expiryCount > 0) {
+            // Find the nearest expiry date for urgency context
+            const nearestExpiry = expiringMeds.reduce((min, m) => {
+                const d = new Date(m.expiryDate);
+                return d < min ? d : min;
+            }, new Date(expiringMeds[0].expiryDate));
+            const daysToNearest = Math.max(0, Math.ceil((nearestExpiry - new Date()) / (1000 * 60 * 60 * 24)));
+
             priorities.push({
                 type: "expiry",
                 severity: "critical",
-                title: `${expiryCount} medicine${expiryCount > 1 ? 's' : ''} expire${expiryCount === 1 ? 's' : ''} within 30 days`,
-                impact: `₹${expiryVal.toLocaleString('en-IN', { maximumFractionDigits: 0 })} at risk`,
+                title: `${expiryCount} medicine${expiryCount > 1 ? 's' : ''} expire${expiryCount === 1 ? 's' : ''} within ${daysToNearest <= 0 ? '0' : daysToNearest} days`,
+                impact: `Potential loss: ₹${expiryVal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
+                costAtRisk: expiryVal,
+                recommendation: daysToNearest > 14 ? "Return to supplier before return window closes" : daysToNearest > 7 ? "Initiate supplier return or discount clearance sale" : "Immediate write-off — expiry window has closed for returns",
+                reasonWhy: `${expiryCount} medicine${expiryCount > 1 ? 's' : ''} with stock on shelves will become unsellable, locking ₹${expiryVal.toLocaleString('en-IN', { maximumFractionDigits: 0 })} in dead inventory`,
                 action: "Review Expiry",
                 route: "/expiry-dashboard",
                 role: "Manager",
+                responsibleRole: "Branch Manager",
                 count: expiryCount
             });
         }
@@ -537,30 +557,202 @@ export const getDashboardPriorities = async (req, res) => {
                 type: "reorder",
                 severity: "warning",
                 title: `${lowStockCount} medicine${lowStockCount > 1 ? 's' : ''} below safety stock limit`,
-                impact: "Patient Outflow: Empty shelf risk",
+                impact: "Patient outflow risk — empty shelf could cause lost sales",
+                costAtRisk: 0,
+                recommendation: "Create supplier order for affected medicines",
+                reasonWhy: `Stock levels have fallen below the configured reorder point for ${lowStockCount} active medicine${lowStockCount > 1 ? 's' : ''}, risking customer walk-outs`,
                 action: "Order Stock",
                 route: "/reorder-intelligence",
                 role: "Manager",
+                responsibleRole: "Branch Manager",
                 count: lowStockCount
             });
         }
 
         // Watch Branch Health
         if (healthScore < 70) {
+            const targetScore = 70;
+            const gap = targetScore - healthScore;
             priorities.push({
                 type: "branch_health",
                 severity: "watch",
-                title: `Branch health score dropped to ${healthScore}%`,
-                impact: `Reason: ${topReason}`,
+                title: `Branch health score at ${healthScore}% — needs ${gap} pts to recover`,
+                impact: `Top issue: ${topReason}`,
+                costAtRisk: 0,
+                recommendation: `Fix the highest-impact issue first: ${topReason}`,
+                reasonWhy: `A score below 70 signals operational risk — compliance audits, stock-outs, and expired inventory are compounding`,
                 action: "Review Branch",
                 route: "/branch-comparison",
                 role: "Admin",
+                responsibleRole: "Admin / Owner",
                 count: 1
             });
         }
 
-        res.json({ priorities });
+        // Filter priorities based on role
+        let filteredPriorities = priorities;
+        if (req.user.role === 'Pharmacist') {
+            filteredPriorities = priorities.filter(p => p.role === 'Pharmacist');
+        } else if (req.user.role === 'Manager') {
+            filteredPriorities = priorities.filter(p => ['Manager', 'Pharmacist'].includes(p.role));
+        }
+        // Admin sees all priorities (Admin, Manager, Pharmacist)
+
+        res.json({ priorities: filteredPriorities });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 };
+
+// GET /api/dashboard/health-breakdown
+export const getDashboardHealthBreakdown = async (req, res) => {
+    try {
+        let pharmacyId = req.user.pharmacyId;
+        // Support admin branch context override
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
+
+        if (!pharmacyId) {
+            return res.json({
+                score: 100,
+                baseline: 100,
+                deductions: [],
+                band: "excellent",
+                bandLabel: "Excellent — branch is healthy"
+            });
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // 1. Expired medicines (Compliance)
+        const expiredCount = await Medicine.countDocuments({
+            pharmacyId,
+            status: { $ne: 'Archived' },
+            stock: { $gt: 0 },
+            expiryDate: { $lt: today }
+        });
+        const expiredPoints = Math.min(45, expiredCount * 15);
+
+        // 2. Out of stock medicines (Availability)
+        const outOfStockCount = await Medicine.countDocuments({
+            pharmacyId,
+            status: 'Active',
+            stock: 0
+        });
+        const outOfStockPoints = Math.min(20, outOfStockCount * 10);
+
+        // 3. Near Expiry medicines (Expiry Management)
+        const thirtyDaysFromNow = new Date();
+        thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+        const nearExpiryCount = await Medicine.countDocuments({
+            pharmacyId,
+            status: { $ne: 'Archived' },
+            stock: { $gt: 0 },
+            expiryDate: { $gte: today, $lte: thirtyDaysFromNow }
+        });
+        const nearExpiryPoints = Math.min(25, nearExpiryCount * 5);
+
+        // 4. Low stock medicines
+        const lowStockCount = await Medicine.countDocuments({
+            pharmacyId,
+            status: 'Active',
+            $expr: { $lte: ["$stock", "$reorderPoint"] }
+        });
+        const lowStockPoints = Math.min(20, lowStockCount * 5);
+
+        // 5. Unresolved alerts
+        const alertCount = await Alert.countDocuments({
+            pharmacyId,
+            isRead: false
+        });
+        const alertPoints = Math.min(20, alertCount * 5);
+
+        const deductions = [];
+        if (expiredCount > 0) {
+            deductions.push({
+                type: "expired",
+                reason: "Expired medicines",
+                count: expiredCount,
+                pointsDeducted: expiredPoints,
+                severity: "critical",
+                action: "Go to Expiry Intelligence",
+                route: "/expiry-dashboard"
+            });
+        }
+        if (lowStockCount > 0) {
+            deductions.push({
+                type: "low_stock",
+                reason: "Medicines below reorder point",
+                count: lowStockCount,
+                pointsDeducted: lowStockPoints,
+                severity: "warning",
+                action: "Go to Reorder Center",
+                route: "/reorder-intelligence"
+            });
+        }
+        if (alertCount > 0) {
+            deductions.push({
+                type: "alert",
+                reason: "Unresolved alerts",
+                count: alertCount,
+                pointsDeducted: alertPoints,
+                severity: "watch",
+                action: "View Alerts",
+                route: "/dashboard"
+            });
+        }
+
+        const score = Math.max(0, 100 - expiredPoints - outOfStockPoints - nearExpiryPoints - lowStockPoints - alertPoints);
+
+        // Determine band
+        let band = "excellent";
+        let bandLabel = "Excellent — branch is healthy";
+        if (score < 50) {
+            band = "critical";
+            bandLabel = "Critical — urgent intervention";
+        } else if (score < 70) {
+            band = "warning";
+            bandLabel = "Warning — action needed today";
+        } else if (score < 90) {
+            band = "good";
+            bandLabel = "Good — minor issues to watch";
+        }
+
+        // Determine dynamic action instruction to reach 95
+        let toReachTarget = "Resolve low stock alerts.";
+        if (score >= 95) {
+            toReachTarget = "Your branch is at peak operational health!";
+        } else {
+            if (expiredCount > 0) {
+                toReachTarget = "Resolve expired medicine alerts (write-off or return) to reach 95%.";
+            } else if (lowStockCount > 0) {
+                toReachTarget = "Resolve low stock alerts (reorder critical stock) to reach 95%.";
+            } else if (alertCount > 0) {
+                toReachTarget = "Dismiss pending compliance alerts to reach 95%.";
+            } else {
+                toReachTarget = "Address minor stock variances to reach 95%.";
+            }
+        }
+
+        res.json({
+            score,
+            baseline: 100,
+            deductions,
+            band,
+            bandLabel,
+            scoreBreakdown: {
+                compliance: 50 - expiredPoints,
+                availability: 30 - outOfStockPoints,
+                expiry: 20 - nearExpiryPoints,
+                lowStock: -lowStockPoints,
+                alerts: -alertPoints
+            },
+            toReachTarget
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+

@@ -82,6 +82,10 @@ const supplierSchema = new mongoose.Schema({
         returnRate: {
             type: Number,
             default: 0 // Percentage
+        },
+        delayedOrders: {
+            type: Number,
+            default: 0
         }
     }
 }, {

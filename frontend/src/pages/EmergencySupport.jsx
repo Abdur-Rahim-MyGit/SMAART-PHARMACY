@@ -27,7 +27,8 @@ export default function EmergencySupport() {
     // Fetch local out-of-stock medicines
     const fetchLocalOutOfStock = async () => {
         try {
-            const res = await fetch('/api/medicines');
+            const url = activeBranch?.id ? `/api/medicines?branchId=${activeBranch.id}` : '/api/medicines';
+            const res = await fetch(url);
             if (res.ok) {
                 const data = await res.json();
                 // Filter for medicines that are out of stock (stock === 0)
@@ -43,7 +44,8 @@ export default function EmergencySupport() {
     const fetchRequests = async () => {
         setLoadingRequests(true);
         try {
-            const res = await fetch('/api/emergency/requests');
+            const url = activeBranch?.id ? `/api/emergency/requests?branchId=${activeBranch.id}` : '/api/emergency/requests';
+            const res = await fetch(url);
             if (res.ok) {
                 const data = await res.json();
                 setRequests(data);
@@ -72,7 +74,9 @@ export default function EmergencySupport() {
         
         setLoadingSearch(true);
         try {
-            const res = await fetch(`/api/emergency/search?query=${encodeURIComponent(val)}`);
+            const baseUrl = `/api/emergency/search?query=${encodeURIComponent(val)}`;
+            const url = activeBranch?.id ? `${baseUrl}&branchId=${activeBranch.id}` : baseUrl;
+            const res = await fetch(url);
             if (res.ok) {
                 const data = await res.json();
                 setSearchResults(data);
@@ -114,7 +118,8 @@ export default function EmergencySupport() {
 
         setSubmittingRequest(true);
         try {
-            const res = await fetch('/api/emergency/requests', {
+            const url = activeBranch?.id ? `/api/emergency/requests?branchId=${activeBranch.id}` : '/api/emergency/requests';
+            const res = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -150,7 +155,8 @@ export default function EmergencySupport() {
     // Approve/Reject incoming requests
     const handleStatusUpdate = async (reqId, newStatus) => {
         try {
-            const res = await fetch(`/api/emergency/requests/${reqId}`, {
+            const url = activeBranch?.id ? `/api/emergency/requests/${reqId}?branchId=${activeBranch.id}` : `/api/emergency/requests/${reqId}`;
+            const res = await fetch(url, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: newStatus })
@@ -170,8 +176,16 @@ export default function EmergencySupport() {
     };
 
     // Filter requests
-    const sentRequests = requests.filter(r => r.sourcePharmacyId?._id === activeBranch?.id);
-    const receivedRequests = requests.filter(r => r.targetPharmacyId?._id === activeBranch?.id);
+    const sentRequests = requests.filter(r => {
+        const sourceId = r.sourcePharmacyId?._id || r.sourcePharmacyId?.id || r.sourcePharmacyId;
+        const activeId = activeBranch?.id || activeBranch?._id;
+        return String(sourceId) === String(activeId);
+    });
+    const receivedRequests = requests.filter(r => {
+        const targetId = r.targetPharmacyId?._id || r.targetPharmacyId?.id || r.targetPharmacyId;
+        const activeId = activeBranch?.id || activeBranch?._id;
+        return String(targetId) === String(activeId);
+    });
 
     return (
         <div className="space-y-6 relative max-w-5xl mx-auto">
@@ -195,7 +209,7 @@ export default function EmergencySupport() {
             {/* Header section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-xl font-bold tracking-tight text-white font-serif italic" style={{ fontFamily: "'Lora', serif" }}>
+                    <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)] font-serif italic" style={{ fontFamily: "'Lora', serif" }}>
                         Emergency Network Support
                     </h2>
                     <p className="text-xs text-[var(--text-muted)] mt-0.5">
@@ -204,23 +218,23 @@ export default function EmergencySupport() {
                 </div>
                 <div className="flex items-center gap-2">
                     <span className="text-xs text-[var(--text-secondary)] font-medium">Local Branch:</span>
-                    <span className="text-xs px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.07] text-white font-bold">
+                    <span className="text-xs px-2.5 py-1 rounded-full bg-[var(--bg-secondary)] border border-[var(--card-border)] text-[var(--text-primary)] font-bold">
                         {activeBranch?.name || 'Loading branch...'}
                     </span>
                 </div>
             </div>
 
             {/* Search Box & Out-Of-Stock Quick Actions */}
-            <div className="rounded-2xl p-5 glass border border-white/[0.06] space-y-4">
+            <div className="rounded-2xl p-5 premium-card border border-[var(--card-border)] space-y-4">
                 <div className="flex flex-col md:flex-row items-stretch gap-2.5">
                     <div className="flex-1 relative">
-                        <span className="material-symbols-rounded absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40 text-lg">
+                        <span className="material-symbols-rounded absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-primary)]/40 text-lg">
                             search
                         </span>
                         <input
                             type="text"
                             placeholder="Type medication name or NDC code..."
-                            className="w-full bg-[#0d1222]/80 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-xs font-semibold text-white placeholder-white/30 outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)] transition-all"
+                            className="w-full bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl py-3 pl-11 pr-4 text-xs font-semibold text-[var(--text-primary)] placeholder-[var(--text-secondary)] outline-none focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)] transition-all"
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
                             onKeyDown={handleSearchKeyPress}
@@ -242,8 +256,8 @@ export default function EmergencySupport() {
 
                 {/* Local stock shortage shortcuts */}
                 {outOfStockMeds.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-white/[0.04]">
-                        <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                    <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[var(--card-border)]">
+                        <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
                             Local Out-of-Stock:
                         </span>
                         {outOfStockMeds.map(med => (
@@ -253,7 +267,7 @@ export default function EmergencySupport() {
                                     setSearchQuery(med.name);
                                     handleSearch(med.name);
                                 }}
-                                className="text-[11px] font-bold px-2 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 active:scale-95 transition-all cursor-pointer"
+                                className="text-xs font-bold px-2 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 active:scale-95 transition-all cursor-pointer"
                             >
                                 {med.name}
                             </button>
@@ -272,30 +286,30 @@ export default function EmergencySupport() {
                         {searchResults.map((item, idx) => (
                             <div 
                                 key={idx} 
-                                className="rounded-xl p-4 glass-elevated border border-white/[0.08] flex flex-col justify-between gap-3 relative hover:border-[var(--brand)]/30 transition-all group"
+                                className="rounded-xl p-4 premium-card-elevated border border-[var(--card-border)] flex flex-col justify-between gap-3 relative hover:border-[var(--brand)]/30 transition-all group"
                             >
                                 <div className="flex items-start justify-between gap-2">
                                     <div>
-                                        <h4 className="text-xs font-bold text-white group-hover:text-[var(--brand)] transition-colors">
+                                        <h4 className="text-xs font-bold text-[var(--text-primary)] group-hover:text-[var(--brand)] transition-colors">
                                             {item.pharmacy.name}
                                         </h4>
-                                        <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                                        <p className="text-xs text-[var(--text-muted)] mt-0.5">
                                             {item.pharmacy.address || 'Address not listed'}
                                         </p>
                                     </div>
                                     <div className="flex flex-col items-end flex-shrink-0">
-                                        <span className="text-[11px] font-mono text-[var(--brand)] font-bold">
+                                        <span className="text-xs font-mono text-[var(--brand)] font-bold">
                                             {item.distance} away
                                         </span>
-                                        <span className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                                        <span className="text-xs text-[var(--text-muted)] mt-0.5">
                                             Branch Code: {item.pharmacy.branchCode || 'N/A'}
                                         </span>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-2 bg-[#090d16]/60 rounded-lg p-2.5 border border-white/[0.04]">
+                                <div className="grid grid-cols-2 gap-2 bg-[#090d16]/60 rounded-lg p-2.5 border border-[var(--card-border)]">
                                     <div>
-                                        <div className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] font-bold">
+                                        <div className="text-xs uppercase tracking-wider text-[var(--text-muted)] font-bold">
                                             Availability
                                         </div>
                                         <div className="text-xs font-black text-emerald-400 mt-0.5">
@@ -303,10 +317,10 @@ export default function EmergencySupport() {
                                         </div>
                                     </div>
                                     <div>
-                                        <div className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] font-bold">
+                                        <div className="text-xs uppercase tracking-wider text-[var(--text-muted)] font-bold">
                                             Coordinator
                                         </div>
-                                        <div className="text-xs font-bold text-white truncate mt-0.5">
+                                        <div className="text-xs font-bold text-[var(--text-primary)] truncate mt-0.5">
                                             {item.pharmacy.coordinator || 'N/A'}
                                         </div>
                                     </div>
@@ -315,14 +329,14 @@ export default function EmergencySupport() {
                                 <div className="flex items-center gap-2 pt-1">
                                     <a
                                         href={`tel:${item.pharmacy.contactPhone}`}
-                                        className="flex-1 py-2 rounded-lg border border-white/10 hover:bg-white/5 active:scale-95 text-center text-[11px] font-bold text-white transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                        className="flex-1 py-2 rounded-lg border border-[var(--card-border)] hover:bg-[var(--bg-secondary)] active:scale-95 text-center text-xs font-bold text-[var(--text-primary)] transition-all flex items-center justify-center gap-1 cursor-pointer"
                                     >
                                         <span className="material-symbols-rounded text-xs">phone</span>
                                         <span>Call ({item.pharmacy.contactPhone || 'N/A'})</span>
                                     </a>
                                     <button
                                         onClick={() => openRequestModal(item)}
-                                        className="flex-1 py-2 rounded-lg bg-[var(--brand)] text-[#0a0d14] font-bold text-[11px] hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                        className="flex-1 py-2 rounded-lg bg-[var(--brand)] text-[#0a0d14] font-bold text-xs hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-1 cursor-pointer"
                                     >
                                         <span className="material-symbols-rounded text-xs font-bold">local_shipping</span>
                                         <span>Request Stock</span>
@@ -343,7 +357,7 @@ export default function EmergencySupport() {
                         <h3 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">
                             Sent Requests (Stock Needed)
                         </h3>
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/5 border border-white/10 font-bold text-[var(--text-muted)]">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--bg-secondary)] border border-[var(--card-border)] font-bold text-[var(--text-muted)]">
                             {sentRequests.length} Total
                         </span>
                     </div>
@@ -352,23 +366,23 @@ export default function EmergencySupport() {
                         {loadingRequests ? (
                             <div className="text-center py-10 text-[var(--text-muted)] text-xs">Loading requests...</div>
                         ) : sentRequests.length === 0 ? (
-                            <div className="rounded-xl p-8 border border-dashed border-white/10 text-center text-[var(--text-muted)] text-xs">
+                            <div className="rounded-xl p-8 border border-dashed border-[var(--card-border)] text-center text-[var(--text-muted)] text-xs">
                                 No outgoing emergency requests.
                             </div>
                         ) : (
                             sentRequests.map((req) => (
-                                <div key={req._id} className="rounded-xl p-3.5 glass border border-white/[0.05] space-y-2.5">
+                                <div key={req._id} className="rounded-xl p-3.5 premium-card border border-[var(--card-border)] space-y-2.5">
                                     <div className="flex items-start justify-between gap-2">
                                         <div>
-                                            <h4 className="text-xs font-bold text-white leading-tight">
+                                            <h4 className="text-xs font-bold text-[var(--text-primary)] leading-tight">
                                                 {req.medicineName}
                                             </h4>
-                                            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                                            <p className="text-xs text-[var(--text-muted)] mt-0.5">
                                                 Requested from: {req.targetPharmacyId?.name || 'Unknown Branch'}
                                             </p>
                                         </div>
                                         <span 
-                                            className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                                            className="text-xs font-bold px-2 py-0.5 rounded-full"
                                             style={{
                                                 background: req.urgency === 'Critical' ? 'rgba(239, 68, 68, 0.12)' : req.urgency === 'High' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(59, 130, 246, 0.12)',
                                                 border: `1px solid ${req.urgency === 'Critical' ? 'rgba(239, 68, 68, 0.3)' : req.urgency === 'High' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`,
@@ -379,9 +393,9 @@ export default function EmergencySupport() {
                                         </span>
                                     </div>
 
-                                    <div className="flex items-center justify-between text-[11px] text-[var(--text-secondary)] border-t border-white/[0.04] pt-2.5">
+                                    <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] border-t border-[var(--card-border)] pt-2.5">
                                         <div>
-                                            Qty: <span className="font-bold text-white">{req.quantityRequested}</span>
+                                            Qty: <span className="font-bold text-[var(--text-primary)]">{req.quantityRequested}</span>
                                         </div>
                                         <div className="flex items-center gap-1.5 font-bold">
                                             <span>Status:</span>
@@ -396,7 +410,7 @@ export default function EmergencySupport() {
                                     </div>
                                     
                                     {req.notes && (
-                                        <p className="text-[11px] italic text-[var(--text-muted)] bg-white/[0.02] border border-white/[0.04] rounded p-1.5">
+                                        <p className="text-xs italic text-[var(--text-muted)] bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded p-1.5">
                                             "{req.notes}"
                                         </p>
                                     )}
@@ -412,7 +426,7 @@ export default function EmergencySupport() {
                         <h3 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">
                             Received Requests (Stock Requested)
                         </h3>
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/5 border border-white/10 font-bold text-[var(--text-muted)]">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--bg-secondary)] border border-[var(--card-border)] font-bold text-[var(--text-muted)]">
                             {receivedRequests.length} Total
                         </span>
                     </div>
@@ -421,23 +435,23 @@ export default function EmergencySupport() {
                         {loadingRequests ? (
                             <div className="text-center py-10 text-[var(--text-muted)] text-xs">Loading requests...</div>
                         ) : receivedRequests.length === 0 ? (
-                            <div className="rounded-xl p-8 border border-dashed border-white/10 text-center text-[var(--text-muted)] text-xs">
+                            <div className="rounded-xl p-8 border border-dashed border-[var(--card-border)] text-center text-[var(--text-muted)] text-xs">
                                 No incoming emergency requests.
                             </div>
                         ) : (
                             receivedRequests.map((req) => (
-                                <div key={req._id} className="rounded-xl p-3.5 glass border border-white/[0.05] space-y-2.5">
+                                <div key={req._id} className="rounded-xl p-3.5 premium-card border border-[var(--card-border)] space-y-2.5">
                                     <div className="flex items-start justify-between gap-2">
                                         <div>
-                                            <h4 className="text-xs font-bold text-white leading-tight">
+                                            <h4 className="text-xs font-bold text-[var(--text-primary)] leading-tight">
                                                 {req.medicineName}
                                             </h4>
-                                            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                                            <p className="text-xs text-[var(--text-muted)] mt-0.5">
                                                 Requested by: {req.sourcePharmacyId?.name || 'Unknown Branch'}
                                             </p>
                                         </div>
                                         <span 
-                                            className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                                            className="text-xs font-bold px-2 py-0.5 rounded-full"
                                             style={{
                                                 background: req.urgency === 'Critical' ? 'rgba(239, 68, 68, 0.12)' : req.urgency === 'High' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(59, 130, 246, 0.12)',
                                                 border: `1px solid ${req.urgency === 'Critical' ? 'rgba(239, 68, 68, 0.3)' : req.urgency === 'High' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`,
@@ -448,9 +462,9 @@ export default function EmergencySupport() {
                                         </span>
                                     </div>
 
-                                    <div className="flex items-center justify-between text-[11px] text-[var(--text-secondary)] border-t border-white/[0.04] pt-2.5">
+                                    <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] border-t border-[var(--card-border)] pt-2.5">
                                         <div>
-                                            Quantity: <span className="font-bold text-white">{req.quantityRequested}</span>
+                                            Quantity: <span className="font-bold text-[var(--text-primary)]">{req.quantityRequested}</span>
                                         </div>
                                         <div className="font-bold">
                                             Status: <span style={{
@@ -460,7 +474,7 @@ export default function EmergencySupport() {
                                     </div>
                                     
                                     {req.notes && (
-                                        <p className="text-[11px] italic text-[var(--text-muted)] bg-white/[0.02] border border-white/[0.04] rounded p-1.5">
+                                        <p className="text-xs italic text-[var(--text-muted)] bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded p-1.5">
                                             "{req.notes}"
                                         </p>
                                     )}
@@ -470,13 +484,13 @@ export default function EmergencySupport() {
                                         <div className="flex items-center gap-2 pt-1">
                                             <button
                                                 onClick={() => handleStatusUpdate(req._id, 'Rejected')}
-                                                className="flex-1 py-1.5 rounded-lg border border-red-500/25 hover:bg-red-500/10 active:scale-95 text-[11px] font-bold text-red-400 transition-all cursor-pointer"
+                                                className="flex-1 py-1.5 rounded-lg border border-red-500/25 hover:bg-red-500/10 active:scale-95 text-xs font-bold text-red-400 transition-all cursor-pointer"
                                             >
                                                 Decline
                                             </button>
                                             <button
                                                 onClick={() => handleStatusUpdate(req._id, 'Approved')}
-                                                className="flex-1 py-1.5 rounded-lg bg-[#34d399] text-[#0a0d14] font-bold text-[11px] hover:opacity-90 active:scale-95 transition-all cursor-pointer"
+                                                className="flex-1 py-1.5 rounded-lg bg-[#34d399] text-[#0a0d14] font-bold text-xs hover:opacity-90 active:scale-95 transition-all cursor-pointer"
                                             >
                                                 Approve
                                             </button>
@@ -488,7 +502,7 @@ export default function EmergencySupport() {
                                         <div className="flex items-center gap-2 pt-1">
                                             <button
                                                 onClick={() => handleStatusUpdate(req._id, 'Fulfilled')}
-                                                className="w-full py-1.5 rounded-lg bg-[var(--brand)] text-[#0a0d14] font-bold text-[11px] hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                                className="w-full py-1.5 rounded-lg bg-[var(--brand)] text-[#0a0d14] font-bold text-xs hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-1 cursor-pointer"
                                             >
                                                 <span className="material-symbols-rounded text-xs">done_all</span>
                                                 <span>Mark as Transferred</span>
@@ -506,44 +520,44 @@ export default function EmergencySupport() {
             {/* Request Modal */}
             {showModal && selectedItem && (
                 <div 
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--card-bg)]/60 backdrop-blur-sm"
                     onClick={() => setShowModal(false)}
                 >
                     <div 
-                        className="w-full max-w-md rounded-2xl border border-white/[0.08] p-5 shadow-2xl animate-slide-up space-y-4"
+                        className="w-full max-w-md rounded-2xl border border-[var(--card-border)] p-5 shadow-2xl animate-slide-up space-y-4"
                         style={{ background: 'rgba(20, 25, 41, 0.95)' }}
                         onClick={e => e.stopPropagation()}
                     >
                         <div>
                             <div className="flex items-center justify-between">
-                                <h3 className="text-sm font-bold text-white font-serif italic" style={{ fontFamily: "'Lora', serif" }}>
+                                <h3 className="text-sm font-bold text-[var(--text-primary)] font-serif italic" style={{ fontFamily: "'Lora', serif" }}>
                                     Send Emergency Transfer Request
                                 </h3>
                                 <button 
                                     onClick={() => setShowModal(false)}
-                                    className="text-white/40 hover:text-white transition cursor-pointer"
+                                    className="text-[var(--text-primary)]/40 hover:text-[var(--text-primary)] transition cursor-pointer"
                                 >
                                     <span className="material-symbols-rounded text-base">close</span>
                                 </button>
                             </div>
-                            <p className="text-[11px] text-[var(--text-muted)] mt-1">
+                            <p className="text-xs text-[var(--text-muted)] mt-1">
                                 Target branch: <span className="font-bold text-[var(--text-secondary)]">{selectedItem.pharmacy.name}</span>
                             </p>
                         </div>
 
                         <form onSubmit={submitRequest} className="space-y-3.5">
                             <div>
-                                <label className="block text-[11px] uppercase tracking-wider text-[var(--text-muted)] font-bold mb-1">
+                                <label className="block text-xs uppercase tracking-wider text-[var(--text-muted)] font-bold mb-1">
                                     Medicine
                                 </label>
-                                <div className="text-xs font-bold text-white bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5">
-                                    {selectedItem.name} <span className="font-mono text-white/50 text-[11px] ml-1.5">(NDC: {selectedItem.ndc})</span>
+                                <div className="text-xs font-bold text-[var(--text-primary)] bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl px-3.5 py-2.5">
+                                    {selectedItem.name} <span className="font-mono text-[var(--text-primary)]/50 text-xs ml-1.5">(NDC: {selectedItem.ndc})</span>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-[11px] uppercase tracking-wider text-[var(--text-muted)] font-bold mb-1">
+                                    <label className="block text-xs uppercase tracking-wider text-[var(--text-muted)] font-bold mb-1">
                                         Quantity Needed
                                     </label>
                                     <input
@@ -551,20 +565,20 @@ export default function EmergencySupport() {
                                         min="1"
                                         max={selectedItem.stock}
                                         required
-                                        className="w-full bg-[#0d1222]/80 border border-white/10 rounded-xl py-2.5 px-3 text-xs font-semibold text-white placeholder-white/30 outline-none focus:border-[var(--brand)] transition-all"
+                                        className="w-full bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl py-2.5 px-3 text-xs font-semibold text-[var(--text-primary)] placeholder-[var(--text-secondary)] outline-none focus:border-[var(--brand)] transition-all"
                                         value={requestQty}
                                         onChange={e => setRequestQty(e.target.value)}
                                     />
-                                    <span className="text-[11px] text-emerald-400 mt-1 block">
+                                    <span className="text-xs text-emerald-400 mt-1 block">
                                         Max: {selectedItem.stock} units
                                     </span>
                                 </div>
                                 <div>
-                                    <label className="block text-[11px] uppercase tracking-wider text-[var(--text-muted)] font-bold mb-1">
+                                    <label className="block text-xs uppercase tracking-wider text-[var(--text-muted)] font-bold mb-1">
                                         Urgency
                                     </label>
                                     <select
-                                        className="w-full bg-[#0d1222]/80 border border-white/10 rounded-xl py-2.5 px-3 text-xs font-semibold text-white outline-none focus:border-[var(--brand)] transition-all cursor-pointer"
+                                        className="w-full bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl py-2.5 px-3 text-xs font-semibold text-[var(--text-primary)] outline-none focus:border-[var(--brand)] transition-all cursor-pointer"
                                         value={requestUrgency}
                                         onChange={e => setRequestUrgency(e.target.value)}
                                     >
@@ -576,27 +590,27 @@ export default function EmergencySupport() {
                             </div>
 
                             <div>
-                                <label className="block text-[11px] uppercase tracking-wider text-[var(--text-muted)] font-bold mb-1">
+                                <label className="block text-xs uppercase tracking-wider text-[var(--text-muted)] font-bold mb-1">
                                     Your Contact Phone
                                 </label>
                                 <input
                                     type="text"
                                     required
                                     placeholder="Enter your phone number..."
-                                    className="w-full bg-[#0d1222]/80 border border-white/10 rounded-xl py-2.5 px-3 text-xs font-semibold text-white placeholder-white/30 outline-none focus:border-[var(--brand)] transition-all"
+                                    className="w-full bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl py-2.5 px-3 text-xs font-semibold text-[var(--text-primary)] placeholder-[var(--text-secondary)] outline-none focus:border-[var(--brand)] transition-all"
                                     value={requestPhone}
                                     onChange={e => setRequestPhone(e.target.value)}
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-[11px] uppercase tracking-wider text-[var(--text-muted)] font-bold mb-1">
+                                <label className="block text-xs uppercase tracking-wider text-[var(--text-muted)] font-bold mb-1">
                                     Emergency Notes / Case Detail
                                 </label>
                                 <textarea
                                     placeholder="Provide brief details about patient urgency..."
                                     rows="2"
-                                    className="w-full bg-[#0d1222]/80 border border-white/10 rounded-xl py-2 px-3 text-xs font-semibold text-white placeholder-white/30 outline-none focus:border-[var(--brand)] transition-all resize-none"
+                                    className="w-full bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl py-2 px-3 text-xs font-semibold text-[var(--text-primary)] placeholder-[var(--text-secondary)] outline-none focus:border-[var(--brand)] transition-all resize-none"
                                     value={requestNotes}
                                     onChange={e => setRequestNotes(e.target.value)}
                                 />
@@ -606,7 +620,7 @@ export default function EmergencySupport() {
                                 <button
                                     type="button"
                                     onClick={() => setShowModal(false)}
-                                    className="flex-1 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 active:scale-95 text-xs font-bold text-white transition-all cursor-pointer"
+                                    className="flex-1 py-2.5 rounded-xl border border-[var(--card-border)] hover:bg-[var(--bg-secondary)] active:scale-95 text-xs font-bold text-[var(--text-primary)] transition-all cursor-pointer"
                                 >
                                     Cancel
                                 </button>

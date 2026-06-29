@@ -28,9 +28,13 @@ export const getMedicines = async (req, res) => {
 // Retrieve a single medicine record with tenant verification and substitute finder
 export const getMedicineById = async (req, res) => {
     try {
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
         const medicine = await Medicine.findOne({
             _id: req.params.id,
-            pharmacyId: req.user.pharmacyId
+            pharmacyId
         });
         
         if (!medicine) {
@@ -39,7 +43,7 @@ export const getMedicineById = async (req, res) => {
 
         // Find similar medicines in-stock in the same category
         const similarInDb = await Medicine.find({
-            pharmacyId: req.user.pharmacyId,
+            pharmacyId,
             category: medicine.category,
             _id: { $ne: medicine._id },
             status: 'Active',
@@ -71,6 +75,11 @@ export const addMedicine = async (req, res) => {
             return res.status(400).json({ message: 'Name, NDC, and Price are required' });
         }
 
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
+
         const medicine = new Medicine({
             name,
             ndc,
@@ -80,7 +89,7 @@ export const addMedicine = async (req, res) => {
             supplier,
             status: 'Active',
             expiryDate: expiryDate ? new Date(expiryDate) : undefined,
-            pharmacyId: req.user.pharmacyId, // Always bind to user's pharmacy
+            pharmacyId, // Always bind to user's pharmacy
             updatedBy: req.user.id,
             createdBy: req.user.id,
             reorderPoint: reorderPoint !== undefined ? Number(reorderPoint) : 20
@@ -91,7 +100,7 @@ export const addMedicine = async (req, res) => {
         // Audit Log entry
         const log = new InventoryLog({
             medicineId: savedMedicine._id,
-            pharmacyId: req.user.pharmacyId,
+            pharmacyId,
             userId: req.user.id,
             changeType: 'Create',
             quantityChanged: savedMedicine.stock,
@@ -113,9 +122,13 @@ export const addMedicine = async (req, res) => {
 export const updateMedicine = async (req, res) => {
     const { name, ndc, category, stock, price, supplier, status, expiryDate, reorderPoint } = req.body;
     try {
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
         const medicine = await Medicine.findOne({
             _id: req.params.id,
-            pharmacyId: req.user.pharmacyId
+            pharmacyId
         });
 
         if (!medicine) {
@@ -161,7 +174,7 @@ export const updateMedicine = async (req, res) => {
 
         const log = new InventoryLog({
             medicineId: medicine._id,
-            pharmacyId: req.user.pharmacyId,
+            pharmacyId,
             userId: req.user.id,
             changeType,
             quantityChanged,
@@ -184,9 +197,13 @@ export const updateMedicine = async (req, res) => {
 // Retrieve audit logs for a single medicine record with tenant verification
 export const getMedicineLogs = async (req, res) => {
     try {
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
         const logs = await InventoryLog.find({
             medicineId: req.params.id,
-            pharmacyId: req.user.pharmacyId
+            pharmacyId
         })
         .populate('userId', 'username')
         .sort({ createdAt: -1 });

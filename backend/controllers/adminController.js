@@ -4,6 +4,7 @@ import Medicine from '../models/Medicine.js';
 import BranchAudit from '../models/BranchAudit.js';
 import UserAudit from '../models/UserAudit.js';
 import InventoryTransaction from '../models/InventoryTransaction.js';
+import Alert from '../models/Alert.js';
 
 // ── PHARMACY ENDPOINTS ──
 
@@ -14,17 +15,81 @@ export const getPharmaciesAdmin = async (req, res) => {
             .populate('assignedManager', 'username fullName role status')
             .sort({ name: 1 });
         
-        // Enhance each pharmacy with staff count and total inventory valuation
+        // Enhance each pharmacy with staff count, total inventory valuation, and health details
         const enhancedPharmacies = [];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const thirtyDaysFromNow = new Date();
+        thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+
         for (const p of pharmacies) {
             const staffCount = await User.countDocuments({ pharmacyId: p._id });
-            const medicines = await Medicine.find({ pharmacyId: p._id });
+            const medicines = await Medicine.find({ pharmacyId: p._id, status: { $ne: 'Archived' } });
             const totalInventoryValue = medicines.reduce((sum, med) => sum + (med.stock * med.price), 0);
             
+            let lowStockCount = 0;
+            let expiryRisks = 0;
+            let deadStockRisk = 0;
+            let expiredCount = 0;
+
+            medicines.forEach(m => {
+                const reorderThreshold = m.reorderPoint !== undefined ? m.reorderPoint : 20;
+                if (m.status === 'Active' && m.stock <= reorderThreshold) {
+                    lowStockCount++;
+                }
+
+                if (m.expiryDate && m.stock > 0) {
+                    const expDate = new Date(m.expiryDate);
+                    if (expDate < today) {
+                        expiredCount++;
+                        deadStockRisk += m.stock * m.price;
+                    } else if (expDate <= thirtyDaysFromNow) {
+                        expiryRisks++;
+                    }
+                }
+            });
+
+            const activeAlerts = await Alert.countDocuments({ pharmacyId: p._id, isRead: false });
+
+            // Compile attention items
+            const attentionNeeded = [];
+            if (expiredCount > 0) {
+                attentionNeeded.push({
+                    problem: `${expiredCount} expired medicine(s) in stock`,
+                    impact: `Dead stock valued at ₹${deadStockRisk.toLocaleString('en-IN', { maximumFractionDigits: 0 })} is unsellable.`,
+                    recommendedAction: "Dispose or return expired items immediately to write off dead stock.",
+                    responsibleRole: "Branch Manager",
+                    route: "/expiry-dashboard"
+                });
+            }
+            if (lowStockCount > 0) {
+                attentionNeeded.push({
+                    problem: `${lowStockCount} medicine(s) below reorder level`,
+                    impact: "Risks critical stock-outs and business service disruption.",
+                    recommendedAction: "Review safety margins and generate a new purchase order.",
+                    responsibleRole: "Branch Manager",
+                    route: "/reorder-intelligence"
+                });
+            }
+            if (activeAlerts > 0) {
+                attentionNeeded.push({
+                    problem: `${activeAlerts} unresolved warning alert(s)`,
+                    impact: "Operational or compliance indicators require verification.",
+                    recommendedAction: "Review and dismiss open alert logs on the dashboard.",
+                    responsibleRole: "Store Admin",
+                    route: "/dashboard"
+                });
+            }
+
             enhancedPharmacies.push({
                 ...p.toObject(),
                 staffCount,
-                totalInventoryValue
+                totalInventoryValue,
+                lowStockCount,
+                expiryRisks,
+                deadStockRisk,
+                activeAlerts,
+                attentionNeeded
             });
         }
 

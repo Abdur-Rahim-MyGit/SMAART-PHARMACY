@@ -87,6 +87,21 @@ const updateSupplierMetrics = async (supplierId, pharmacyId) => {
             .sort((a, b) => new Date(b.actualDeliveryDate) - new Date(a.actualDeliveryDate));
         const lastDeliveryDate = deliveredOrdersSorted.length > 0 ? deliveredOrdersSorted[0].actualDeliveryDate : null;
 
+        // Calculate delayed orders count
+        let delayedOrders = 0;
+        const now = new Date();
+        orders.forEach(order => {
+            if (order.status === 'Delivered' && order.actualDeliveryDate && order.expectedDeliveryDate) {
+                if (new Date(order.actualDeliveryDate) > new Date(order.expectedDeliveryDate)) {
+                    delayedOrders++;
+                }
+            } else if (['Ordered', 'In Transit'].includes(order.status) && order.expectedDeliveryDate) {
+                if (new Date(order.expectedDeliveryDate) < now) {
+                    delayedOrders++;
+                }
+            }
+        });
+
         supplier.performanceMetrics = {
             totalOrders,
             completedOrders,
@@ -94,7 +109,8 @@ const updateSupplierMetrics = async (supplierId, pharmacyId) => {
             totalPurchaseValue,
             lastDeliveryDate,
             averageDeliveryTime,
-            returnRate
+            returnRate,
+            delayedOrders
         };
         supplier.healthScore = healthScore;
         
@@ -113,7 +129,11 @@ const updateSupplierMetrics = async (supplierId, pharmacyId) => {
 export const getSuppliers = async (req, res) => {
     try {
         const { filter, search } = req.query;
-        let query = { pharmacyId: req.user.pharmacyId };
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
+        let query = { pharmacyId };
 
         if (filter === 'Active') {
             query.status = 'Active';
@@ -143,7 +163,46 @@ export const getSuppliers = async (req, res) => {
             suppliers.sort((a, b) => b.healthScore - a.healthScore);
         }
 
-        res.json(suppliers);
+        // Enrich suppliers with top 3 supplied medicines and recalculate/retrieve delayedOrders dynamically
+        const enrichedSuppliers = [];
+        for (let supplier of suppliers) {
+            const supplierObj = supplier.toObject();
+            
+            // Find top 3 medicines supplied by this supplier
+            const meds = await Medicine.find({
+                pharmacyId,
+                $or: [
+                    { primarySupplier: supplier._id },
+                    { alternateSupplier: supplier._id }
+                ]
+            }).limit(3).select('name');
+            supplierObj.mostSuppliedMedicines = meds.map(m => m.name);
+            
+            // Count delayed purchase orders
+            const orders = await PurchaseOrder.find({ supplierId: supplier._id, pharmacyId });
+            let delayedCount = 0;
+            const now = new Date();
+            orders.forEach(order => {
+                if (order.status === 'Delivered' && order.actualDeliveryDate && order.expectedDeliveryDate) {
+                    if (new Date(order.actualDeliveryDate) > new Date(order.expectedDeliveryDate)) {
+                        delayedCount++;
+                    }
+                } else if (['Ordered', 'In Transit'].includes(order.status) && order.expectedDeliveryDate) {
+                    if (new Date(order.expectedDeliveryDate) < now) {
+                        delayedCount++;
+                    }
+                }
+            });
+
+            supplierObj.performanceMetrics = {
+                ...supplierObj.performanceMetrics,
+                delayedOrders: delayedCount
+            };
+            
+            enrichedSuppliers.push(supplierObj);
+        }
+
+        res.json(enrichedSuppliers);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -152,14 +211,18 @@ export const getSuppliers = async (req, res) => {
 // GET /api/suppliers/:id
 export const getSupplierById = async (req, res) => {
     try {
-        const supplier = await Supplier.findOne({ _id: req.params.id, pharmacyId: req.user.pharmacyId });
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
+        const supplier = await Supplier.findOne({ _id: req.params.id, pharmacyId });
         if (!supplier) {
             return res.status(404).json({ message: 'Supplier not found' });
         }
 
         // Fetch medicines supplied by this supplier
         const medicines = await Medicine.find({
-            pharmacyId: req.user.pharmacyId,
+            pharmacyId,
             $or: [
                 { primarySupplier: supplier._id },
                 { alternateSupplier: supplier._id }
@@ -181,6 +244,11 @@ export const createSupplier = async (req, res) => {
             return res.status(400).json({ message: 'All fields are required.' });
         }
 
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
+
         const supplier = new Supplier({
             name,
             contactPerson,
@@ -188,14 +256,14 @@ export const createSupplier = async (req, res) => {
             email,
             address,
             gstNumber,
-            pharmacyId: req.user.pharmacyId
+            pharmacyId
         });
 
         const savedSupplier = await supplier.save();
 
         // Log audit trail
         await logAuditTrail({
-            pharmacyId: req.user.pharmacyId,
+            pharmacyId,
             userId: req.user.id,
             username: req.session.username || 'System User',
             action: 'Supplier Creation',
@@ -214,7 +282,11 @@ export const createSupplier = async (req, res) => {
 export const updateSupplier = async (req, res) => {
     try {
         const { name, contactPerson, phone, email, address, gstNumber, status } = req.body;
-        const supplier = await Supplier.findOne({ _id: req.params.id, pharmacyId: req.user.pharmacyId });
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
+        const supplier = await Supplier.findOne({ _id: req.params.id, pharmacyId });
 
         if (!supplier) {
             return res.status(404).json({ message: 'Supplier not found.' });
@@ -242,7 +314,7 @@ export const updateSupplier = async (req, res) => {
         // Create notification for Supplier Inactivity / Deactivation
         if (deactivationTriggered) {
             await Alert.create({
-                pharmacyId: req.user.pharmacyId,
+                pharmacyId,
                 title: 'Supplier Deactivated',
                 message: `Supplier ${supplier.name} has been set to Inactive status.`,
                 severity: 'warning',
@@ -250,7 +322,7 @@ export const updateSupplier = async (req, res) => {
             });
 
             await logAuditTrail({
-                pharmacyId: req.user.pharmacyId,
+                pharmacyId,
                 userId: req.user.id,
                 username: req.session.username || 'System User',
                 action: 'Supplier Deactivation',
@@ -261,7 +333,7 @@ export const updateSupplier = async (req, res) => {
             });
         } else {
             await logAuditTrail({
-                pharmacyId: req.user.pharmacyId,
+                pharmacyId,
                 userId: req.user.id,
                 username: req.session.username || 'System User',
                 action: 'Supplier Update',
@@ -283,7 +355,11 @@ export const updateSupplier = async (req, res) => {
 // GET /api/purchase-orders
 export const getPurchaseOrders = async (req, res) => {
     try {
-        const query = { pharmacyId: req.user.pharmacyId };
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
+        const query = { pharmacyId };
         const orders = await PurchaseOrder.find(query)
             .populate('supplierId')
             .sort({ createdAt: -1 });
@@ -296,7 +372,11 @@ export const getPurchaseOrders = async (req, res) => {
 // GET /api/purchase-orders/:id
 export const getPurchaseOrderById = async (req, res) => {
     try {
-        const order = await PurchaseOrder.findOne({ _id: req.params.id, pharmacyId: req.user.pharmacyId })
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
+        const order = await PurchaseOrder.findOne({ _id: req.params.id, pharmacyId })
             .populate('supplierId')
             .populate('createdBy', 'fullName role')
             .populate('approvedBy', 'fullName role');
@@ -318,8 +398,13 @@ export const createPurchaseOrder = async (req, res) => {
             return res.status(400).json({ message: 'Supplier and medicine items list are required.' });
         }
 
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
+
         // Validate supplier
-        const supplier = await Supplier.findOne({ _id: supplierId, pharmacyId: req.user.pharmacyId });
+        const supplier = await Supplier.findOne({ _id: supplierId, pharmacyId });
         if (!supplier) {
             return res.status(404).json({ message: 'Supplier not found.' });
         }
@@ -337,7 +422,7 @@ export const createPurchaseOrder = async (req, res) => {
         let grandTotal = 0;
         const items = [];
         for (const item of medicines) {
-            const med = await Medicine.findOne({ _id: item.medicineId, pharmacyId: req.user.pharmacyId });
+            const med = await Medicine.findOne({ _id: item.medicineId, pharmacyId });
             if (!med) {
                 return res.status(404).json({ message: `Medicine ID ${item.medicineId} not found in catalog.` });
             }
@@ -365,7 +450,7 @@ export const createPurchaseOrder = async (req, res) => {
         const po = new PurchaseOrder({
             poNumber,
             supplierId,
-            pharmacyId: req.user.pharmacyId,
+            pharmacyId,
             medicines: items,
             totalCost: grandTotal,
             expectedDeliveryDate: expectedDeliveryDate ? new Date(expectedDeliveryDate) : new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
@@ -378,7 +463,7 @@ export const createPurchaseOrder = async (req, res) => {
 
         // Write Audit log
         await logAuditTrail({
-            pharmacyId: req.user.pharmacyId,
+            pharmacyId,
             userId: req.user.id,
             username: req.session.username || 'System User',
             action: 'Purchase Order Creation',
@@ -390,7 +475,7 @@ export const createPurchaseOrder = async (req, res) => {
         // Trigger notification if Pending Approval
         if (targetStatus === 'Pending Approval') {
             await Alert.create({
-                pharmacyId: req.user.pharmacyId,
+                pharmacyId,
                 title: 'Pending Purchase Order',
                 message: `New Purchase Order ${poNumber} requires Admin approval.`,
                 severity: 'info',
@@ -399,7 +484,7 @@ export const createPurchaseOrder = async (req, res) => {
         }
 
         // Recalculate metrics
-        await updateSupplierMetrics(supplierId, req.user.pharmacyId);
+        await updateSupplierMetrics(supplierId, pharmacyId);
 
         res.status(201).json(savedPO);
     } catch (err) {
@@ -411,7 +496,11 @@ export const createPurchaseOrder = async (req, res) => {
 export const updatePurchaseOrder = async (req, res) => {
     try {
         const { status, expectedDeliveryDate, medicines, notes } = req.body;
-        const po = await PurchaseOrder.findOne({ _id: req.params.id, pharmacyId: req.user.pharmacyId });
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
+        const po = await PurchaseOrder.findOne({ _id: req.params.id, pharmacyId });
 
         if (!po) {
             return res.status(404).json({ message: 'Purchase Order not found.' });
@@ -443,7 +532,7 @@ export const updatePurchaseOrder = async (req, res) => {
             let grandTotal = 0;
             const items = [];
             for (const item of medicines) {
-                const med = await Medicine.findOne({ _id: item.medicineId, pharmacyId: req.user.pharmacyId });
+                const med = await Medicine.findOne({ _id: item.medicineId, pharmacyId });
                 if (med) {
                     const unitCost = Number(item.unitCost) >= 0 ? Number(item.unitCost) : med.supplierCost || 0;
                     const quantity = Number(item.quantity);
@@ -468,18 +557,18 @@ export const updatePurchaseOrder = async (req, res) => {
             
             // Loop items and increment stock levels
             for (const item of po.medicines) {
-                const med = await Medicine.findOne({ _id: item.medicineId, pharmacyId: req.user.pharmacyId });
+                const med = await Medicine.findOne({ _id: item.medicineId, pharmacyId });
                 if (med) {
                     const oldStock = med.stock;
                     med.stock += item.quantity;
                     med.lastPurchasePrice = item.unitCost;
                     med.updatedBy = req.user.id;
                     await med.save();
-
+ 
                     // Generate Inventory Transaction log
                     await InventoryTransaction.create({
                         medicineId: med._id,
-                        pharmacyId: req.user.pharmacyId,
+                        pharmacyId,
                         userId: req.user.id,
                         transactionType: 'Stock In',
                         quantityChanged: item.quantity,
@@ -487,11 +576,11 @@ export const updatePurchaseOrder = async (req, res) => {
                         receivedDate: new Date(),
                         notes: `Procured via Purchase Order ${po.poNumber}`
                     });
-
+ 
                     // Generate Inventory Log audit
                     await InventoryLog.create({
                         medicineId: med._id,
-                        pharmacyId: req.user.pharmacyId,
+                        pharmacyId,
                         userId: req.user.id,
                         changeType: 'StockUpdate',
                         quantityChanged: item.quantity,
@@ -507,7 +596,7 @@ export const updatePurchaseOrder = async (req, res) => {
 
         // Write audit log for status change
         await logAuditTrail({
-            pharmacyId: req.user.pharmacyId,
+            pharmacyId,
             userId: req.user.id,
             username: req.session.username || 'System User',
             action: previousStatus !== savedPO.status ? 'PO Status Changed' : 'PO Updated',
@@ -520,7 +609,7 @@ export const updatePurchaseOrder = async (req, res) => {
         // Trigger Alerts for Delayed Deliveries, Rejected Orders, and Pending Approval
         if (savedPO.status === 'Cancelled' && previousStatus !== 'Cancelled') {
             await Alert.create({
-                pharmacyId: req.user.pharmacyId,
+                pharmacyId,
                 title: 'Rejected Purchase Order',
                 message: `Purchase Order ${po.poNumber} has been rejected or cancelled.`,
                 severity: 'critical',
@@ -529,7 +618,7 @@ export const updatePurchaseOrder = async (req, res) => {
         }
 
         // Recalculate metrics
-        await updateSupplierMetrics(po.supplierId, req.user.pharmacyId);
+        await updateSupplierMetrics(po.supplierId, pharmacyId);
 
         res.json(savedPO);
     } catch (err) {
@@ -540,7 +629,11 @@ export const updatePurchaseOrder = async (req, res) => {
 // GET /api/suppliers-analytics
 export const getSupplierAnalytics = async (req, res) => {
     try {
-        const pharmacyId = new mongoose.Types.ObjectId(req.user.pharmacyId);
+        let pharmacyIdVal = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyIdVal = req.query.branchId;
+        }
+        const pharmacyId = new mongoose.Types.ObjectId(pharmacyIdVal);
 
         // 1. Spend per month (Last 6 Months)
         const spendByMonth = await PurchaseOrder.aggregate([
@@ -645,7 +738,11 @@ export const getSupplierAnalytics = async (req, res) => {
 // GET /api/suppliers-audit
 export const getSupplierAuditLogs = async (req, res) => {
     try {
-        const query = { pharmacyId: req.user.pharmacyId };
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
+        const query = { pharmacyId };
         const logs = await SupplierAudit.find(query).sort({ timestamp: -1 });
         res.json(logs);
     } catch (err) {

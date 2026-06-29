@@ -3,8 +3,12 @@ import Alert from '../models/Alert.js';
 // Retrieve active alerts scoped by pharmacyId
 export const getAlerts = async (req, res) => {
     try {
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
         const alerts = await Alert.find({
-            pharmacyId: req.user.pharmacyId,
+            pharmacyId,
             isRead: false
         }).sort({ createdAt: -1 });
 
@@ -17,8 +21,12 @@ export const getAlerts = async (req, res) => {
 // Dismiss/Mark alert as read
 export const markAlertAsRead = async (req, res) => {
     try {
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
         const alert = await Alert.findOneAndUpdate(
-            { _id: req.params.id, pharmacyId: req.user.pharmacyId },
+            { _id: req.params.id, pharmacyId },
             { isRead: true },
             { new: true }
         );

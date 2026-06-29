@@ -11,7 +11,10 @@ export const searchNetworkMedicine = async (req, res) => {
             return res.json([]);
         }
 
-        const userPharmacyId = req.user.pharmacyId;
+        let userPharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            userPharmacyId = req.query.branchId;
+        }
 
         // Find medicines in other branches with matching name/ndc, active, and stock > 0
         const matches = await Medicine.find({
@@ -62,7 +65,10 @@ export const searchNetworkMedicine = async (req, res) => {
 // Retrieve all emergency requests (incoming & outgoing) for current pharmacy
 export const getEmergencyRequests = async (req, res) => {
     try {
-        const pharmacyId = req.user.pharmacyId;
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
 
         const requests = await EmergencyRequest.find({
             $or: [
@@ -89,7 +95,13 @@ export const createEmergencyRequest = async (req, res) => {
             return res.status(400).json({ message: 'Missing required request details' });
         }
 
-        const sourcePharmacyId = req.user.pharmacyId;
+        let sourcePharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin') {
+            const bId = req.query.branchId || req.body.branchId;
+            if (bId) {
+                sourcePharmacyId = bId;
+            }
+        }
 
         // Verify source and target are different
         if (String(sourcePharmacyId) === String(targetPharmacyId)) {
@@ -142,7 +154,13 @@ export const updateEmergencyRequestStatus = async (req, res) => {
             return res.status(400).json({ message: 'Invalid status update' });
         }
 
-        const pharmacyId = req.user.pharmacyId;
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin') {
+            const bId = req.query.branchId || req.body.branchId;
+            if (bId) {
+                pharmacyId = bId;
+            }
+        }
 
         // Fetch request
         const request = await EmergencyRequest.findById(id);

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function RevenueAnalytics() {
-    const { user, activeBranch } = useAuth();
+    const { user, activeBranch, switchBranch } = useAuth();
     const navigate = useNavigate();
 
     // Data States
@@ -12,9 +12,19 @@ export default function RevenueAnalytics() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    // Modal Guide state
+    const [isExplModalOpen, setIsExplModalOpen] = useState(false);
+
     // Filter selector (Admin only)
     const [selectedBranchId, setSelectedBranchId] = useState('');
     const [hoveredTrend, setHoveredTrend] = useState(null);
+
+    // Sync selectedBranchId with activeBranch when activeBranch changes
+    useEffect(() => {
+        if (activeBranch?.id) {
+            setSelectedBranchId(activeBranch.id);
+        }
+    }, [activeBranch]);
 
     // Role verification
     useEffect(() => {
@@ -90,14 +100,14 @@ export default function RevenueAnalytics() {
             <div className="flex flex-col items-center justify-center py-40 gap-4 text-center max-w-md mx-auto animate-fade-in">
                 <span className="material-symbols-rounded text-6xl text-red-500 bg-red-500/10 p-3 rounded-full border border-red-500/20">lock</span>
                 <div>
-                    <h3 className="text-xl font-bold text-white font-serif">Security Restriction</h3>
-                    <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                    <h3 className="text-xl font-bold text-[var(--text-primary)] font-serif">Security Restriction</h3>
+                    <p className="text-xs text-[var(--text-secondary)] mt-2 leading-relaxed">
                         Your account credentials (Pharmacist) do not permit viewing branch financials, profit margins, or invoice valuations.
                     </p>
                 </div>
                 <button 
                     onClick={() => navigate('/dashboard')}
-                    className="px-5 py-2.5 rounded-xl text-xs font-bold bg-[#00c2cc]/5 border border-[#00c2cc]/15 text-[#00c2cc] cursor-pointer hover:bg-[#00c2cc]/10 transition-all"
+                    className="px-5 py-2.5 rounded-xl text-xs font-bold bg-[#00B4D8]/5 border border-[#00B4D8]/15 text-[#00B4D8] cursor-pointer hover:bg-[#00B4D8]/10 transition-all"
                 >
                     Return to Dashboard
                 </button>
@@ -107,7 +117,7 @@ export default function RevenueAnalytics() {
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center py-44 gap-3 text-slate-400 animate-fade-in">
+            <div className="flex flex-col items-center justify-center py-44 gap-3 text-[var(--text-secondary)] animate-fade-in">
                 <span className="material-symbols-rounded animate-spin text-3xl text-cyan-400">sync</span>
                 <span className="text-sm">Calculating branch profit margins & aggregation feeds…</span>
             </div>
@@ -119,12 +129,12 @@ export default function RevenueAnalytics() {
             <div className="flex flex-col items-center justify-center py-32 gap-4 text-center max-w-md mx-auto animate-fade-in">
                 <span className="material-symbols-rounded text-5xl text-red-400">error</span>
                 <div>
-                    <h3 className="text-lg font-bold text-white font-serif">Aggregation Error</h3>
-                    <p className="text-xs text-slate-400 mt-1">{error}</p>
+                    <h3 className="text-lg font-bold text-[var(--text-primary)] font-serif">Aggregation Error</h3>
+                    <p className="text-xs text-[var(--text-secondary)] mt-1">{error}</p>
                 </div>
                 <button 
                     onClick={fetchInitialData} 
-                    className="px-5 py-2.5 rounded-xl text-xs font-bold bg-[#00c2cc]/5 border border-[#00c2cc]/15 text-[#00c2cc] cursor-pointer hover:bg-[#00c2cc]/10"
+                    className="px-5 py-2.5 rounded-xl text-xs font-bold bg-[#00B4D8]/5 border border-[#00B4D8]/15 text-[#00B4D8] cursor-pointer hover:bg-[#00B4D8]/10"
                 >
                     Retry Diagnostics
                 </button>
@@ -132,7 +142,7 @@ export default function RevenueAnalytics() {
         );
     }
 
-    const { metrics, monthlyTrends, topMedicines, branchPerformance } = analytics;
+    const { metrics, monthlyTrends, topMedicines, categoryBreakdown = [], branchPerformance } = analytics;
     const maxTrendVal = Math.max(...monthlyTrends.map(t => Math.max(t.revenue, t.profit, 100)), 1000);
 
     return (
@@ -141,13 +151,13 @@ export default function RevenueAnalytics() {
             {/* Header / Top Panel */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex flex-col gap-1">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-400">
+                    <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">
                         Financial Administration
                     </span>
-                    <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white leading-none font-serif">
+                    <h2 className="text-2xl md:text-3xl font-black tracking-tight text-[var(--text-primary)] leading-none font-serif">
                         Revenue <span className="text-cyan-400">Analytics</span>
                     </h2>
-                    <p className="text-xs text-slate-300">
+                    <p className="text-xs text-[var(--text-secondary)]">
                         Secure access to gross sales margins, transactional profit sheets, and branch-wide financial breakdowns.
                     </p>
                 </div>
@@ -157,8 +167,17 @@ export default function RevenueAnalytics() {
                     {user?.role === 'Admin' ? (
                         <select
                             value={selectedBranchId}
-                            onChange={(e) => setSelectedBranchId(e.target.value)}
-                            className="px-3.5 py-2.5 rounded-xl bg-slate-900 border border-white/10 text-xs text-white outline-none focus:border-cyan-400/50"
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setSelectedBranchId(val);
+                                if (val) {
+                                    const selected = pharmacies.find(p => p._id === val);
+                                    if (selected) {
+                                        switchBranch(selected._id, selected.name);
+                                    }
+                                }
+                            }}
+                            className="px-3.5 py-2.5 rounded-xl bg-[var(--card-bg)] border border-[var(--card-border)] text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400/50"
                         >
                             <option value="">All Branches</option>
                             {pharmacies.map(p => (
@@ -166,14 +185,23 @@ export default function RevenueAnalytics() {
                             ))}
                         </select>
                     ) : (
-                        <div className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-slate-300">
+                        <div className="px-4 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--card-border)] text-xs text-[var(--text-secondary)]">
                             Assigned Branch Scope
                         </div>
                     )}
 
                     <button
+                        onClick={() => setIsExplModalOpen(true)}
+                        className="px-4 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--card-border)] hover:bg-[var(--card-bg)]/10 text-xs font-bold text-[var(--text-secondary)] cursor-pointer flex items-center gap-1.5 transition-all"
+                        title="Understand Metrics & Charts"
+                    >
+                        <span className="material-symbols-rounded text-sm">menu_book</span>
+                        <span>Explain Charts</span>
+                    </button>
+
+                    <button
                         onClick={handleExportReport}
-                        className="px-5 py-2.5 rounded-xl bg-cyan-400 text-slate-900 text-xs font-black hover:bg-cyan-300 cursor-pointer shadow-lg shadow-cyan-400/5 hover:shadow-cyan-400/20 transition-all flex items-center gap-1.5"
+                        className="px-5 py-2.5 rounded-xl bg-cyan-400 text-[var(--text-primary)] text-xs font-black hover:bg-cyan-300 cursor-pointer shadow-lg shadow-cyan-400/5 hover:shadow-cyan-400/20 transition-all flex items-center gap-1.5"
                     >
                         <span className="material-symbols-rounded text-sm font-black">download</span>
                         <span>Export CSV</span>
@@ -184,14 +212,14 @@ export default function RevenueAnalytics() {
             {/* KPI Cards Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                    { label: 'Total Revenue', val: `₹${(metrics.totalRevenue || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`, icon: 'payments', col: 'text-white' },
+                    { label: 'Total Revenue', val: `₹${(metrics.totalRevenue || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`, icon: 'payments', col: 'text-[var(--text-primary)]' },
                     { label: 'Net Profit', val: `₹${(metrics.totalProfit || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`, icon: 'savings', col: 'text-emerald-400' },
                     { label: 'Profit Margin', val: `${(metrics.profitMargin || 0).toFixed(1)}%`, icon: 'query_stats', col: 'text-cyan-400' },
                     { label: 'Total Units Sold', val: metrics.totalUnitsSold || 0, icon: 'shopping_bag', col: 'text-purple-400 font-mono' },
                 ].map((card, idx) => (
-                    <div key={idx} className="rounded-xl glass border border-white/5 p-5 flex flex-col gap-1 relative overflow-hidden card-shine">
-                        <div className="flex items-center justify-between text-slate-400">
-                            <span className="text-[11px] font-bold uppercase tracking-wider">{card.label}</span>
+                    <div key={idx} className="rounded-xl premium-card border border-[var(--card-border)] p-5 flex flex-col gap-1 relative overflow-hidden card-shine">
+                        <div className="flex items-center justify-between text-[var(--text-secondary)]">
+                            <span className="text-xs font-bold uppercase tracking-wider">{card.label}</span>
                             <span className="material-symbols-rounded text-base">{card.icon}</span>
                         </div>
                         <span className={`text-2xl font-black mt-2 leading-none ${card.col}`}>{card.val}</span>
@@ -203,20 +231,20 @@ export default function RevenueAnalytics() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
                 
                 {/* Monthly Revenue vs Profit (Lines/Bars combo) */}
-                <div className="lg:col-span-8 rounded-xl glass border border-white/5 p-5 flex flex-col gap-4">
-                    <div className="flex justify-between items-center border-b border-white/5 pb-3">
+                <div className="lg:col-span-8 rounded-xl premium-card border border-[var(--card-border)] p-5 flex flex-col gap-4">
+                    <div className="flex justify-between items-center border-b border-[var(--card-border)] pb-3">
                         <div className="flex flex-col gap-0.5">
-                            <h3 className="text-base font-bold text-white font-serif">Revenue & Net Profit Trends</h3>
-                            <span className="text-[11px] text-slate-400 font-mono uppercase">Last 6 Months (INR)</span>
+                            <h3 className="text-base font-bold text-[var(--text-primary)] font-serif">Revenue & Net Profit Trends</h3>
+                            <span className="text-xs text-[var(--text-secondary)] font-mono uppercase">Last 6 Months (INR)</span>
                         </div>
                         <div className="flex items-center gap-3">
                             <div className="flex items-center gap-1.5">
                                 <span className="w-2.5 h-2.5 rounded-sm bg-cyan-400" />
-                                <span className="text-[11px] text-slate-300">Revenue</span>
+                                <span className="text-xs text-[var(--text-secondary)]">Revenue</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <span className="w-2.5 h-2.5 rounded-sm bg-emerald-400" />
-                                <span className="text-[11px] text-slate-300">Net Profit</span>
+                                <span className="text-xs text-[var(--text-secondary)]">Net Profit</span>
                             </div>
                         </div>
                     </div>
@@ -224,7 +252,7 @@ export default function RevenueAnalytics() {
                     {/* Chart Area */}
                     <div className="relative w-full h-56 pt-2">
                         {monthlyTrends.length === 0 ? (
-                            <div className="flex items-center justify-center h-full text-slate-500 text-xs">
+                            <div className="flex items-center justify-center h-full text-[var(--text-secondary)] text-xs">
                                 No sales data logged in this range.
                             </div>
                         ) : (
@@ -322,23 +350,23 @@ export default function RevenueAnalytics() {
                 </div>
 
                 {/* Top Selling Products */}
-                <div className="lg:col-span-4 rounded-xl glass border border-white/5 p-5 flex flex-col gap-4">
-                    <div className="flex items-center gap-2 border-b border-white/5 pb-3">
+                <div className="lg:col-span-4 rounded-xl premium-card border border-[var(--card-border)] p-5 flex flex-col gap-4">
+                    <div className="flex items-center gap-2 border-b border-[var(--card-border)] pb-3">
                         <span className="material-symbols-rounded text-cyan-400 text-base font-bold">trending_up</span>
-                        <h3 className="text-base font-bold text-white font-serif">Top Selling Medicines</h3>
+                        <h3 className="text-base font-bold text-[var(--text-primary)] font-serif">Top Selling Medicines</h3>
                     </div>
 
                     <div className="flex flex-col gap-3.5 flex-1 justify-center">
                         {topMedicines.length === 0 ? (
-                            <span className="text-xs text-slate-500">No units sold registered yet.</span>
+                            <span className="text-xs text-[var(--text-secondary)]">No units sold registered yet.</span>
                         ) : (
                             topMedicines.map((med, idx) => (
-                                <div key={idx} className="flex flex-col gap-1.5 p-2 rounded bg-white/[0.005] border border-white/5">
+                                <div key={idx} className="flex flex-col gap-1.5 p-2 rounded bg-[var(--bg-secondary)] border border-[var(--card-border)]">
                                     <div className="flex justify-between text-xs">
-                                        <span className="text-white font-semibold truncate">{med.name}</span>
-                                        <span className="text-slate-400 font-mono">{med.totalQuantity} units</span>
+                                        <span className="text-[var(--text-primary)] font-semibold truncate">{med.name}</span>
+                                        <span className="text-[var(--text-secondary)] font-mono">{med.totalQuantity} units</span>
                                     </div>
-                                    <div className="flex justify-between text-[11px] text-slate-400 leading-none">
+                                    <div className="flex justify-between text-xs text-[var(--text-secondary)] leading-none">
                                         <span>Revenue: <strong className="text-cyan-400">₹{med.revenue.toLocaleString()}</strong></span>
                                         <span>Profit: <strong className="text-emerald-400">₹{med.profit.toLocaleString()}</strong></span>
                                     </div>
@@ -350,26 +378,105 @@ export default function RevenueAnalytics() {
 
             </div>
 
+            {/* Category Breakdown & Financial Glossary Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                {/* Category Breakdown */}
+                <div className="lg:col-span-6 rounded-xl premium-card border border-[var(--card-border)] p-5 flex flex-col gap-4">
+                    <div className="flex items-center gap-2 border-b border-[var(--card-border)] pb-3">
+                        <span className="material-symbols-rounded text-cyan-400 text-base font-bold">pie_chart</span>
+                        <h3 className="text-base font-bold text-[var(--text-primary)] font-serif">Category Performance Breakdown</h3>
+                    </div>
+
+                    <div className="flex flex-col gap-3.5 flex-1 justify-center">
+                        {categoryBreakdown.length === 0 ? (
+                            <span className="text-xs text-[var(--text-secondary)]">No category data recorded.</span>
+                        ) : (
+                            categoryBreakdown.slice(0, 5).map((cat, idx) => {
+                                const totalRevenueSum = categoryBreakdown.reduce((sum, c) => sum + c.revenue, 0) || 1;
+                                const pct = ((cat.revenue / totalRevenueSum) * 100).toFixed(0);
+                                
+                                const colors = [
+                                    { bar: 'bg-cyan-400', text: 'text-cyan-400' },
+                                    { bar: 'bg-emerald-400', text: 'text-emerald-400' },
+                                    { bar: 'bg-purple-400', text: 'text-purple-400' },
+                                    { bar: 'bg-amber-400', text: 'text-amber-400' },
+                                    { bar: 'bg-pink-400', text: 'text-pink-400' }
+                                ];
+                                const colorScheme = colors[idx % colors.length];
+
+                                return (
+                                    <div key={idx} className="flex flex-col gap-1.5 p-2.5 rounded bg-[var(--bg-secondary)] border border-[var(--card-border)]">
+                                        <div className="flex justify-between text-xs">
+                                            <span className="text-[var(--text-primary)] font-semibold truncate">{cat.category}</span>
+                                            <span className="text-[var(--text-secondary)] font-mono">{cat.unitsSold} units sold</span>
+                                        </div>
+                                        <div className="w-full h-1.5 rounded-full bg-[var(--bg-secondary)] overflow-hidden">
+                                            <div style={{ width: `${pct}%` }} className={`h-full ${colorScheme.bar} rounded-full`} />
+                                        </div>
+                                        <div className="flex justify-between text-xs text-[var(--text-secondary)] leading-none mt-1">
+                                            <span>Revenue: <strong className="text-slate-700">₹{cat.revenue.toLocaleString()}</strong></span>
+                                            <span>Profit: <strong className={colorScheme.text}>₹{cat.profit.toLocaleString()} ({pct}%)</strong></span>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                </div>
+
+                {/* Financial Overview/Glossary */}
+                <div className="lg:col-span-6 rounded-xl premium-card border border-[var(--card-border)] p-5 flex flex-col gap-4">
+                    <div className="flex items-center gap-2 border-b border-[var(--card-border)] pb-3">
+                        <span className="material-symbols-rounded text-cyan-400 text-base font-bold">receipt</span>
+                        <h3 className="text-base font-bold text-[var(--text-primary)] font-serif">Quick Accounting Definitions</h3>
+                    </div>
+
+                    <div className="flex flex-col gap-4 flex-1 justify-center text-xs text-[var(--text-secondary)]">
+                        <div className="flex gap-3">
+                            <span className="material-symbols-rounded text-cyan-400 text-base flex-shrink-0 mt-0.5">attach_money</span>
+                            <div>
+                                <strong className="text-[var(--text-primary)] block">Gross Revenue</strong>
+                                <span className="text-xs text-[var(--text-secondary)]">Total transaction sales value without deductions. Represented as Cyan bars in the trend chart.</span>
+                            </div>
+                        </div>
+                        <div className="flex gap-3">
+                            <span className="material-symbols-rounded text-emerald-400 text-base flex-shrink-0 mt-0.5">savings</span>
+                            <div>
+                                <strong className="text-[var(--text-primary)] block">Net Profit & COGS</strong>
+                                <span className="text-xs text-[var(--text-secondary)]">Revenue remaining after deducting COGS (wholesale costs). COGS is Cost of Goods Sold. Represented as Emerald bars.</span>
+                            </div>
+                        </div>
+                        <div className="flex gap-3">
+                            <span className="material-symbols-rounded text-purple-400 text-base flex-shrink-0 mt-0.5">percent</span>
+                            <div>
+                                <strong className="text-[var(--text-primary)] block">Profit Margin</strong>
+                                <span className="text-xs text-[var(--text-secondary)]">The efficiency ratio: <code>(Profit / Revenue) * 100</code>. Indicates how much of every rupee received represents actual profit.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {/* Branch Performance Comparison (Admin Only) */}
             {user?.role === 'Admin' && !selectedBranchId && (
-                <div className="rounded-xl glass border border-white/5 p-5 flex flex-col gap-4">
-                    <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                <div className="rounded-xl premium-card border border-[var(--card-border)] p-5 flex flex-col gap-4">
+                    <div className="flex items-center justify-between border-b border-[var(--card-border)] pb-3">
                         <div className="flex items-center gap-2">
                             <span className="material-symbols-rounded text-cyan-400">compare</span>
-                            <h3 className="text-base font-bold text-white font-serif">Branch Performance Comparison</h3>
+                            <h3 className="text-base font-bold text-[var(--text-primary)] font-serif">Branch Performance Comparison</h3>
                         </div>
-                        <span className="text-[11px] text-slate-400 uppercase font-mono">Real-time ledger matching</span>
+                        <span className="text-xs text-[var(--text-secondary)] uppercase font-mono">Real-time ledger matching</span>
                     </div>
 
                     <div className="overflow-x-auto">
                         {branchPerformance.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-10 text-slate-500">
+                            <div className="flex flex-col items-center justify-center py-10 text-[var(--text-secondary)]">
                                 <span className="text-xs">No active branch sales registered.</span>
                             </div>
                         ) : (
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="border-b border-white/5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                    <tr className="border-b border-[var(--card-border)] text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                                         <th className="pb-3 pl-2">Branch Location</th>
                                         <th className="pb-3 text-right">Revenue</th>
                                         <th className="pb-3 text-right">Net Profit</th>
@@ -379,11 +486,11 @@ export default function RevenueAnalytics() {
                                 </thead>
                                 <tbody>
                                     {branchPerformance.map((branch) => (
-                                        <tr key={branch.pharmacyId} className="border-b border-white/5 hover:bg-white/[0.01] transition-all group">
-                                            <td className="py-3.5 pl-2 font-semibold text-white group-hover:text-cyan-400 transition-colors">
+                                        <tr key={branch.pharmacyId} className="border-b border-[var(--card-border)] hover:bg-[var(--bg-secondary)] transition-all group">
+                                            <td className="py-3.5 pl-2 font-semibold text-[var(--text-primary)] group-hover:text-cyan-400 transition-colors">
                                                 {branch.name}
                                             </td>
-                                            <td className="py-3.5 text-right font-mono text-xs font-bold text-white">
+                                            <td className="py-3.5 text-right font-mono text-xs font-bold text-[var(--text-primary)]">
                                                 ₹{branch.revenue.toLocaleString()}
                                             </td>
                                             <td className="py-3.5 text-right font-mono text-xs font-bold text-emerald-400">
@@ -392,7 +499,7 @@ export default function RevenueAnalytics() {
                                             <td className="py-3.5 text-center text-xs text-cyan-400 font-bold font-mono">
                                                 {branch.margin.toFixed(1)}%
                                             </td>
-                                            <td className="py-3.5 text-center font-mono text-xs text-slate-300">
+                                            <td className="py-3.5 text-center font-mono text-xs text-[var(--text-secondary)]">
                                                 {branch.unitsSold}
                                             </td>
                                         </tr>
@@ -403,6 +510,73 @@ export default function RevenueAnalytics() {
                     </div>
                 </div>
             )}
+
+        {/* Explanation Modal */}
+        {isExplModalOpen && (
+            <div 
+                className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--card-bg)]/60 backdrop-blur-md px-4 animate-fade-in"
+                onClick={() => setIsExplModalOpen(false)}
+            >
+                <div 
+                    className="w-full max-w-xl rounded-2xl p-6 premium-card-elevated border border-[var(--card-border)] shadow-2xl relative animate-slide-up"
+                    style={{ background: 'rgba(20, 25, 41, 0.96)' }}
+                    onClick={e => e.stopPropagation()}
+                >
+                    <button 
+                        onClick={() => setIsExplModalOpen(false)}
+                        className="absolute top-4 right-4 text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
+                    >
+                        <span className="material-symbols-rounded">close</span>
+                    </button>
+
+                    <div className="flex items-center gap-2 mb-4">
+                        <span className="material-symbols-rounded text-cyan-400">menu_book</span>
+                        <h3 className="text-lg font-bold text-[var(--text-primary)] font-serif">Revenue & Analytics Guide</h3>
+                    </div>
+
+                    <div className="flex flex-col gap-4 text-xs text-[var(--text-secondary)] leading-relaxed overflow-y-auto max-h-[70vh] scrollable pr-1">
+                        <div className="flex flex-col gap-1 border-b border-[var(--card-border)] pb-2">
+                            <span className="font-bold text-[var(--text-primary)] uppercase text-xs tracking-wider text-cyan-400">1. Revenue vs Profit Chart</span>
+                            <p>
+                                This chart represents your monthly sales performance. 
+                                The <strong className="text-cyan-300">cyan bars</strong> show the total cash received from transactions (Gross Revenue).
+                                The <strong className="text-emerald-300">emerald bars</strong> show the Net Profit, which is the revenue remaining after subtracting COGS (Cost of Goods Sold).
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col gap-1 border-b border-[var(--card-border)] pb-2">
+                            <span className="font-bold text-[var(--text-primary)] uppercase text-xs tracking-wider text-cyan-400">2. Net Profit Margin</span>
+                            <p>
+                                Calculated as <code>(Net Profit / Gross Revenue) * 100</code>. It shows what percentage of your retail sales is retained as pure earnings. Higher margins reflect optimized supplier procurement and stable pricing power.
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col gap-1 border-b border-[var(--card-border)] pb-2">
+                            <span className="font-bold text-[var(--text-primary)] uppercase text-xs tracking-wider text-cyan-400">3. Category Breakdown Gauges</span>
+                            <p>
+                                Visualizes sales contributions across drug classes. It helps identify which therapeutic categories (e.g. Antibiotics, Pain Relievers, or Cardiological) drive the largest volume and cash returns, indicating where catalog focus is most profitable.
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                            <span className="font-bold text-[var(--text-primary)] uppercase text-xs tracking-wider text-cyan-400">4. COGS Calculation logic</span>
+                            <p>
+                                Cost of Goods Sold (COGS) uses actual supplier wholesale costs recorded when stock is received. If a medicine record has no supplier cost entered, the system applies a standard 70% threshold fallback estimate of its current retail price.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="mt-6">
+                        <button 
+                            onClick={() => setIsExplModalOpen(false)}
+                            className="w-full py-2.5 rounded-xl bg-cyan-400 text-[var(--text-primary)] font-black text-xs hover:bg-cyan-300 cursor-pointer transition-all"
+                        >
+                            Got it, Thanks!
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
 
         </div>
     );

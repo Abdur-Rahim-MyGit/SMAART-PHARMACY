@@ -9,8 +9,13 @@ export const postStockIn = async (req, res) => {
             return res.status(400).json({ message: 'Medicine ID and a valid positive quantity are required.' });
         }
 
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
+
         // Find medicine and check tenant isolation
-        const medicine = await Medicine.findOne({ _id: medicineId, pharmacyId: req.user.pharmacyId });
+        const medicine = await Medicine.findOne({ _id: medicineId, pharmacyId });
         if (!medicine) {
             return res.status(404).json({ message: 'Medication not found in this store ledger.' });
         }
@@ -23,7 +28,7 @@ export const postStockIn = async (req, res) => {
         // Create transaction audit record
         const transaction = new InventoryTransaction({
             medicineId,
-            pharmacyId: req.user.pharmacyId,
+            pharmacyId,
             userId: req.user.id,
             transactionType: 'Stock In',
             quantityChanged: Number(quantity),
@@ -52,8 +57,13 @@ export const postStockOut = async (req, res) => {
             return res.status(400).json({ message: 'Medicine ID and a valid positive quantity are required.' });
         }
 
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
+
         // Find medicine and check tenant isolation
-        const medicine = await Medicine.findOne({ _id: medicineId, pharmacyId: req.user.pharmacyId });
+        const medicine = await Medicine.findOne({ _id: medicineId, pharmacyId });
         if (!medicine) {
             return res.status(404).json({ message: 'Medication not found in this store ledger.' });
         }
@@ -73,7 +83,7 @@ export const postStockOut = async (req, res) => {
         // Create transaction audit record
         const transaction = new InventoryTransaction({
             medicineId,
-            pharmacyId: req.user.pharmacyId,
+            pharmacyId,
             userId: req.user.id,
             transactionType: 'Stock Out',
             quantityChanged: -Number(quantity),
@@ -105,8 +115,13 @@ export const postAdjustment = async (req, res) => {
             return res.status(400).json({ message: 'Invalid transaction type for stock adjustments.' });
         }
 
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
+
         // Find medicine and check tenant isolation
-        const medicine = await Medicine.findOne({ _id: medicineId, pharmacyId: req.user.pharmacyId });
+        const medicine = await Medicine.findOne({ _id: medicineId, pharmacyId });
         if (!medicine) {
             return res.status(404).json({ message: 'Medication not found in this store ledger.' });
         }
@@ -126,7 +141,7 @@ export const postAdjustment = async (req, res) => {
         // Create transaction audit record
         const transaction = new InventoryTransaction({
             medicineId,
-            pharmacyId: req.user.pharmacyId,
+            pharmacyId,
             userId: req.user.id,
             transactionType,
             quantityChanged: Number(quantityChanged),
@@ -149,11 +164,7 @@ export const postAdjustment = async (req, res) => {
 export const getHistory = async (req, res) => {
     const { id, medicineId, transactionType, branchId } = req.query;
     try {
-        let pharmacyId = req.user.pharmacyId;
-        if (req.user.role === 'Admin' && branchId) {
-            pharmacyId = branchId;
-        }
-        const query = { pharmacyId };
+        const query = {};
 
         if (id) {
             query._id = id;
@@ -167,9 +178,20 @@ export const getHistory = async (req, res) => {
             query.transactionType = transactionType;
         }
 
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin') {
+            if (branchId) {
+                query.pharmacyId = branchId;
+            }
+        } else {
+            // Managers and Pharmacists are isolated to their assigned branch
+            query.pharmacyId = pharmacyId;
+        }
+
         const history = await InventoryTransaction.find(query)
             .populate('medicineId', 'name ndc category')
             .populate('userId', 'username')
+            .populate('pharmacyId', 'name branchCode')
             .sort({ createdAt: -1 });
 
         res.json(history);

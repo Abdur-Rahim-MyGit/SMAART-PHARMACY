@@ -5,7 +5,7 @@ const inputStyle = {
     background: 'rgba(255,255,255,0.03)',
     border: 'none',
     color: 'var(--text-primary)',
-    caretColor: '#00c2cc',
+    caretColor: '#00B4D8',
 };
 const focusStyle = {
     background: 'rgba(255,255,255,0.04)',
@@ -23,8 +23,8 @@ const CATEGORIES = ['General', 'Cardiovascular', 'Anti-infective', 'Endocrine', 
 function FormField({ label, required, children, fullWidth }) {
     return (
         <div className={`flex flex-col gap-1.5 ${fullWidth ? 'md:col-span-2' : ''}`}>
-            <label className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-                {label}{required && <span style={{ color: '#00c2cc' }} className="ml-0.5">*</span>}
+            <label className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                {label}{required && <span style={{ color: '#00B4D8' }} className="ml-0.5">*</span>}
             </label>
             {children}
         </div>
@@ -100,7 +100,7 @@ export default function EditMedicine() {
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center py-40 gap-3" style={{ color: 'var(--text-muted)' }}>
-                <span className="material-symbols-rounded animate-spin text-3xl" style={{ color: '#00c2cc' }}>sync</span>
+                <span className="material-symbols-rounded animate-spin text-3xl" style={{ color: '#00B4D8' }}>sync</span>
                 <span className="text-sm">Loading record…</span>
             </div>
         );
@@ -113,15 +113,15 @@ export default function EditMedicine() {
                 style={{ background: 'radial-gradient(circle, rgba(0,194,204,0.03) 0%, transparent 70%)', filter: 'blur(45px)', zIndex: -1 }} />
 
             {/* Breadcrumb */}
-            <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-                <button onClick={() => navigate('/medicines')} className="hover:text-[#00c2cc] transition-colors cursor-pointer">Ledger</button>
+            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                <button onClick={() => navigate('/medicines')} className="hover:text-[#00B4D8] transition-colors cursor-pointer">Ledger</button>
                 <span className="material-symbols-rounded text-sm">chevron_right</span>
                 <span style={{ color: 'var(--text-secondary)' }}>Edit Medicine</span>
             </div>
 
             {/* Header */}
             <div className="flex flex-col gap-0.5">
-                <h2 className="text-3xl font-extrabold tracking-tight text-white" style={{ fontFamily: "'Lora', serif", letterSpacing: '-0.02em' }}>
+                <h2 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]" style={{ fontFamily: "'Lora', serif", letterSpacing: '-0.02em' }}>
                     Edit <span className="text-sky-400">Medicine</span>
                 </h2>
                 <p className="text-[13px]" style={{ color: 'var(--text-secondary)' }}>
@@ -160,7 +160,7 @@ export default function EditMedicine() {
                         </FormField>
                         <FormField label="Unit Cost (₹)" required>
                             <div className="relative">
-                                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold" style={{ color: '#00c2cc' }}>₹</span>
+                                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold" style={{ color: '#00B4D8' }}>₹</span>
                                 <input type="number" step="0.01" min="0" name="price" value={formData.price} onChange={handleChange}
                                     className={`${baseClass} pl-7`}
                                     onFocus={() => setFocused('price')} onBlur={() => setFocused(null)}
@@ -190,10 +190,10 @@ export default function EditMedicine() {
                 <div className="rounded-lg p-5 flex flex-col gap-4 backdrop-blur-xl"
                     style={{ background: 'rgba(15,20,32,0.3)' }}>
                     <div>
-                        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                        <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
                             Inventory Status
                         </span>
-                        <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                             Medicines are never permanently deleted — only status changes.
                         </p>
                     </div>
@@ -259,7 +259,7 @@ export default function EditMedicine() {
                             disabled={isSubmitting}
                             className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold cursor-pointer transition-all duration-200 disabled:opacity-50"
                             style={{
-                                background: 'linear-gradient(135deg, #00c2cc 0%, #0099a8 100%)',
+                                background: 'linear-gradient(135deg, #00B4D8 0%, #0099a8 100%)',
                                 color: '#0a0d14',
                             }}
                         >
