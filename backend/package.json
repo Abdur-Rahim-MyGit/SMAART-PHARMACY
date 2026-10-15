@@ -1,0 +1,21 @@
+{
+  "name": "pharmacy-management-backend",
+  "version": "1.0.0",
+  "description": "Backend API for Pharmacy Management System",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "connect-mongo": "^5.1.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.5.2",
+    "express-session": "^1.18.0",
+    "mongoose": "^8.4.1"
+  }
+}

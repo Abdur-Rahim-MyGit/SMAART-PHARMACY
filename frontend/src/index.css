@@ -1,0 +1,327 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+
+@layer utilities {
+  .font-playfair {
+    font-family: 'Playfair Display', serif;
+  }
+}
+
+/* =====================================================
+   SMAART Pharmacy — Premium SaaS Design System
+   Inspired by Linear, Stripe, Vercel, Notion
+   ===================================================== */
+
+@layer base {
+  :root {
+    --canvas: #F6FAFD; 
+    --canvas-surface: #FFFFFF;
+    --navy: #10233F;
+    --navy-muted: #7E90A8;
+    --brand: #1565F5;
+    --brand-dim: rgba(21, 101, 245, 0.1);
+    --border: #DDE8F2;
+    --success: #2ED47A;
+    --warning: #F59E0B;
+    --danger: #EF4444;
+    
+    /* Dynamic Theme Variables - Light Mode */
+    --bg-primary: #F6FAFD;
+    --bg-secondary: #FFFFFF;
+    --bg-sidebar: #FFFFFF;
+    --bg-header: rgba(255, 255, 255, 0.7);
+    --text-primary: #10233F;
+    --text-secondary: #5C6F89;
+    --text-muted: #7E90A8;
+    --card-bg: #FFFFFF;
+    --card-border: #DDE8F2;
+    --card-shadow: 0 4px 20px -2px rgba(21, 101, 245, 0.05), 0 0 3px rgba(21, 101, 245, 0.02);
+    --card-shadow-hover: 0 12px 32px -4px rgba(21, 101, 245, 0.08), 0 4px 6px rgba(21, 101, 245, 0.04);
+    --table-header: #F6FAFD;
+    --table-row-hover: rgba(246, 250, 253, 0.8);
+    --btn-secondary-bg: #FFFFFF;
+    --btn-secondary-hover: #F6FAFD;
+  }
+
+  .dark {
+    /* Dynamic Theme Variables - Dark Mode */
+    --bg-primary: #08111F;
+    --bg-secondary: #0D1728;
+    --bg-sidebar: #091321;
+    --bg-header: rgba(9, 19, 33, 0.7);
+    --text-primary: #FFFFFF;
+    --text-secondary: #A8B3C7;
+    --text-muted: #708090;
+    --card-bg: #0D1728;
+    --card-border: rgba(255, 255, 255, 0.05);
+    --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5), 0 0 3px rgba(0, 207, 234, 0.05);
+    --card-shadow-hover: 0 12px 32px -4px rgba(0, 0, 0, 0.7), 0 4px 6px rgba(0, 207, 234, 0.15);
+    --table-header: #091321;
+    --table-row-hover: rgba(13, 23, 40, 0.6);
+    --btn-secondary-bg: #0D1728;
+    --btn-secondary-hover: #091321;
+    --brand: #00CFEA;
+    --brand-dim: rgba(0, 207, 234, 0.15);
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    letter-spacing: -0.01em;
+    position: relative;
+    overflow-x: hidden;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* ECG Pattern Background */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 50 L20 50 L30 20 L40 80 L50 50 L100 50' stroke='%231565F5' stroke-width='0.5' fill='none' opacity='0.08'/%3E%3C/svg%3E");
+    background-size: 400px;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  .dark body::before {
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 50 L20 50 L30 20 L40 80 L50 50 L100 50' stroke='%2300CFEA' stroke-width='0.5' fill='none' opacity='0.15'/%3E%3C/svg%3E");
+  }
+
+  /* Molecular Dot Grid */
+  body::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-image: radial-gradient(circle, var(--text-primary) 1px, transparent 1px);
+    background-size: 24px 24px;
+    opacity: 0.02;
+    pointer-events: none;
+    z-index: -2;
+  }
+  
+  .dark body::after {
+    opacity: 0.05;
+  }
+
+  h1, h2, h3 {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+  }
+}
+
+@layer components {
+  /* Premium Cards */
+  .premium-card {
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--card-shadow);
+    @apply transition-all duration-300;
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .premium-card:hover {
+    box-shadow: var(--card-shadow-hover);
+    transform: translateY(-2px);
+  }
+
+  /* Colored top accent for cards */
+  .premium-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, var(--brand), transparent);
+    opacity: 0.8;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply relative overflow-hidden text-white font-medium px-6 py-3 border border-transparent shadow-sm transition-all duration-300 flex items-center justify-center gap-2;
+    border-radius: 9999px;
+    background: linear-gradient(135deg, var(--brand) 0%, var(--success) 100%);
+  }
+
+  .dark .btn-primary {
+    background: linear-gradient(135deg, var(--brand) 0%, #0099ad 100%);
+    color: #08111F;
+    font-weight: 700;
+  }
+
+  .btn-primary:hover {
+    @apply shadow-glow;
+    transform: translateY(-2px);
+    background: linear-gradient(135deg, var(--brand) 0%, #35e486 100%);
+  }
+  
+  .dark .btn-primary:hover {
+    background: linear-gradient(135deg, var(--brand) 0%, #00e0ff 150%);
+  }
+  
+  /* Button ripple / subtle gradient overlay */
+  .btn-primary::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.5s ease;
+  }
+  
+  .btn-primary:hover::after {
+    transform: translateX(100%);
+  }
+
+  .btn-secondary {
+    background-color: var(--btn-secondary-bg);
+    color: var(--brand);
+    border: 1px solid var(--card-border);
+    @apply font-semibold px-6 py-3 shadow-sm transition-all duration-300 flex items-center justify-center gap-2;
+    border-radius: 9999px;
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--btn-secondary-hover);
+    transform: translateY(-1px);
+  }
+
+  /* Tables */
+  .table-premium {
+    @apply w-full text-left border-collapse;
+  }
+  
+  .table-premium th {
+    background-color: var(--table-header);
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--card-border);
+    @apply font-medium py-3 px-4 sticky top-0 z-10 text-xs uppercase tracking-wider;
+  }
+  
+  .table-premium td {
+    border-bottom: 1px solid var(--card-border);
+    color: var(--text-primary);
+    @apply py-4 px-4 transition-colors duration-200;
+  }
+  
+  .table-premium tbody tr:hover td {
+    background-color: var(--table-row-hover);
+  }
+  
+  .table-premium tbody tr:nth-child(even) td {
+    background-color: rgba(21, 101, 245, 0.02);
+  }
+  
+  .dark .table-premium tbody tr:nth-child(even) td {
+    background-color: rgba(255, 255, 255, 0.01);
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    background: linear-gradient(135deg, var(--text-primary) 0%, var(--brand) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+  }
+
+  .scrollable {
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(15, 23, 42, 0.2) transparent;
+  }
+  
+  .nav-item-active {
+    background: linear-gradient(135deg, var(--brand) 0%, var(--success) 100%);
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(21, 101, 245, 0.3);
+    border-radius: 9999px; /* Pill background */
+  }
+  
+  .dark .nav-item-active {
+    background: var(--brand-dim);
+    color: var(--brand) !important;
+    box-shadow: none;
+    border-radius: 12px; /* Revert to rounded-xl in dark mode */
+  }
+}
+
+/* ── Custom scrollbar styling ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.2);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.4);
+}
+
+/* ── Focus ring ── */
+*:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* ── Animations ── */
+.animate-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.hover-lift {
+  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px -4px rgba(15, 23, 42, 0.08), 0 4px 6px rgba(15, 23, 42, 0.04);
+}
